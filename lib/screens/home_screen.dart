@@ -4,6 +4,8 @@ import '../theme/app_theme.dart';
 import '../widgets/carousel_card.dart';
 import 'cosmic_lens_screen.dart';
 import 'echoes_screen.dart';
+import 'air_pulse_screen.dart';
+import 'orbit_watch_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -61,7 +63,10 @@ class _HomeScreenState extends State<HomeScreen> {
       previewIcon: Icons.location_on,
       previewText: '45.2°N · 75.6°W',
       actionHint: 'Live Feed',
-      onTap: () => _navigateToPlaceholder('Orbit Watch'),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const OrbitWatchScreen()),
+      ),
     ),
     CardThemeInfo(
       primaryColor: const Color(0xFFEC4899),
@@ -72,7 +77,10 @@ class _HomeScreenState extends State<HomeScreen> {
       previewIcon: Icons.thermostat,
       previewText: '22°C · Good',
       actionHint: 'Real-time',
-      onTap: () => _navigateToPlaceholder('Air Pulse'),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const AirPulseScreen()),
+      ),
     ),
     CardThemeInfo(
       primaryColor: const Color(0xFF06B6D4),
