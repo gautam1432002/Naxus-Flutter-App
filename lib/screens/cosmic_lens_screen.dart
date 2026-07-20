@@ -2,7 +2,10 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../models/apod_model.dart';
 import '../services/nasa_service.dart';
+import '../services/connectivity_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/loading_state.dart';
+import '../widgets/error_state.dart';
 
 class CosmicLensScreen extends StatefulWidget {
   const CosmicLensScreen({super.key});
@@ -13,6 +16,7 @@ class CosmicLensScreen extends StatefulWidget {
 
 class _CosmicLensScreenState extends State<CosmicLensScreen> {
   final NasaService _nasaService = NasaService();
+  final ConnectivityService _connectivityService = ConnectivityService();
   ApodModel? _apod;
   bool _isLoading = true;
   String? _error;
@@ -28,6 +32,17 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
       _isLoading = true;
       _error = null;
     });
+
+    final hasConnection = await _connectivityService.hasInternetConnection();
+    if (!hasConnection) {
+      if (mounted) {
+        setState(() {
+          _error = 'No internet connection';
+          _isLoading = false;
+        });
+      }
+      return;
+    }
 
     try {
       final apod = await _nasaService.fetchApod();
@@ -56,35 +71,12 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
           children: [
             // States
             if (_isLoading)
-              const Center(
-                child: CircularProgressIndicator(color: accentColor),
-              )
+              const LoadingState(accentColor: accentColor)
             else if (_error != null)
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                      child: Text(
-                        _error!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white70),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: _loadApod,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: accentColor,
-                        foregroundColor: nearBlack,
-                      ),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
+              ErrorState(
+                accentColor: accentColor,
+                message: _error!,
+                onRetry: _loadApod,
               )
             else if (_apod != null)
               ...[
@@ -154,7 +146,7 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
                   child: ClipRRect(
                     borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
                     child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 50, sigmaY: 50),
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                       child: Container(
                         width: double.infinity,
                         height: MediaQuery.of(context).size.height * 0.4,
@@ -212,11 +204,13 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
                 padding: const EdgeInsets.only(left: 16.0, top: 16.0),
                 child: ClipOval(
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                     child: Container(
+                      width: 44,
+                      height: 44,
                       color: Colors.black.withOpacity(0.3),
                       child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
+                        icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
                         onPressed: () => Navigator.of(context).pop(),
                       ),
                     ),

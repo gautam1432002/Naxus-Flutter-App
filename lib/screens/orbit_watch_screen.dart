@@ -5,7 +5,10 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/iss_model.dart';
 import '../services/iss_service.dart';
+import '../services/connectivity_service.dart';
 import '../theme/app_theme.dart';
+import '../widgets/loading_state.dart';
+import '../widgets/error_state.dart';
 
 class OrbitWatchScreen extends StatefulWidget {
   const OrbitWatchScreen({super.key});
@@ -16,6 +19,7 @@ class OrbitWatchScreen extends StatefulWidget {
 
 class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProviderStateMixin {
   final IssService _issService = IssService();
+  final ConnectivityService _connectivityService = ConnectivityService();
   final MapController _mapController = MapController();
   
   IssModel? _issPosition;
@@ -42,6 +46,17 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
   }
 
   Future<void> _initFetch() async {
+    final hasConnection = await _connectivityService.hasInternetConnection();
+    if (!hasConnection) {
+      if (mounted) {
+        setState(() {
+          _error = 'No internet connection';
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
     try {
       final pos = await _issService.fetchIssPosition();
       if (mounted) {
@@ -64,6 +79,9 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
   }
 
   Future<void> _pollPosition() async {
+    final hasConnection = await _connectivityService.hasInternetConnection();
+    if (!hasConnection) return;
+
     try {
       final pos = await _issService.fetchIssPosition();
       if (mounted) {
@@ -134,41 +152,18 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
           children: [
             // Map or Loading/Error State
             if (_isLoading)
-              const Center(
-                child: CircularProgressIndicator(color: accentColor),
-              )
+              const LoadingState(accentColor: accentColor)
             else if (_error != null)
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                      child: Text(
-                        _error!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white70),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: () {
-                        setState(() {
-                          _isLoading = true;
-                          _error = null;
-                        });
-                        _initFetch();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: accentColor,
-                        foregroundColor: nearBlack,
-                      ),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
+              ErrorState(
+                accentColor: accentColor,
+                message: _error!,
+                onRetry: () {
+                  setState(() {
+                    _isLoading = true;
+                    _error = null;
+                  });
+                  _initFetch();
+                },
               )
             else if (_issPosition != null)
               FlutterMap(
@@ -255,11 +250,13 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                   tag: 'orbit_watch_hero',
                   child: ClipOval(
                     child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                       child: Container(
-                        color: Colors.black.withOpacity(0.4),
+                        width: 44,
+                        height: 44,
+                        color: Colors.black.withOpacity(0.3),
                         child: IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.white),
+                          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
                           onPressed: () => Navigator.of(context).pop(),
                         ),
                       ),

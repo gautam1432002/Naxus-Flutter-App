@@ -1,9 +1,21 @@
+import 'dart:async';
 import 'dart:ui';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+
 import '../models/air_quality_model.dart';
+import '../models/weather_model.dart';
+import '../models/location_model.dart';
+
 import '../services/air_quality_service.dart';
+import '../services/weather_service.dart';
+import '../services/geocoding_service.dart';
+import '../services/location_storage_service.dart';
+import '../services/connectivity_service.dart';
+
 import '../theme/app_theme.dart';
+import '../widgets/loading_state.dart';
+import '../widgets/error_state.dart';
 
 class AirPulseScreen extends StatefulWidget {
   const AirPulseScreen({super.key});
@@ -14,7 +26,16 @@ class AirPulseScreen extends StatefulWidget {
 
 class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProviderStateMixin {
   final AirQualityService _airQualityService = AirQualityService();
+  final WeatherService _weatherService = WeatherService();
+  final LocationStorageService _locationStorageService = LocationStorageService();
+  final ConnectivityService _connectivityService = ConnectivityService();
+
+  LocationModel? _currentLocation;
+  
+  List<LocationModel> _savedLocations = [];
+
   AirQualityModel? _airQuality;
+  WeatherModel? _weather;
   bool _isLoading = true;
   String? _error;
 
@@ -30,34 +51,124 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
     );
     _animation = CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic);
     
-    _loadAirQuality();
+    _initData();
+  }
+
+  Future<void> _initData() async {
+    try {
+      final lastLoc = await _locationStorageService.getLastLocation();
+      await _loadSavedLocations();
+      
+      if (lastLoc != null) {
+        _currentLocation = lastLoc;
+        await _fetchData();
+      } else {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = 'Storage Error: $e\n\n(Since we just added the shared_preferences plugin, you must fully stop and restart the app for it to work!)';
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadSavedLocations() async {
+    final locations = await _locationStorageService.getSavedLocations();
+    if (mounted) {
+      setState(() {
+        _savedLocations = locations;
+      });
+    }
+  }
+
+  Future<void> _fetchData() async {
+    if (_currentLocation == null) return;
+    
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    final hasConnection = await _connectivityService.hasInternetConnection();
+    if (!hasConnection) {
+      if (mounted) {
+        setState(() {
+          _error = 'No internet connection';
+          _isLoading = false;
+        });
+      }
+      return;
+    }
+
+    try {
+      final results = await Future.wait([
+        _weatherService.fetchWeather(_currentLocation!.latitude, _currentLocation!.longitude),
+        _airQualityService.fetchAirQuality(_currentLocation!.latitude, _currentLocation!.longitude),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _weather = results[0] as WeatherModel;
+          _airQuality = results[1] as AirQualityModel;
+          _isLoading = false;
+        });
+        _animationController.forward(from: 0.0);
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _saveCurrentLocation() async {
+    if (_currentLocation == null) return;
+    await _locationStorageService.addSavedLocation(_currentLocation!);
+    await _loadSavedLocations();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('${_currentLocation!.name} saved!'),
+          backgroundColor: const Color(0xFFEC4899),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    }
+  }
+
+  void _openSearchSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => _SearchBottomSheet(
+        onSelect: (location) async {
+          await _locationStorageService.saveLastLocation(location);
+          if (mounted) {
+            setState(() {
+              _currentLocation = location;
+            });
+            _fetchData();
+          }
+        },
+      ),
+    );
   }
 
   @override
   void dispose() {
     _animationController.dispose();
     super.dispose();
-  }
-
-  Future<void> _loadAirQuality() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      final aqi = await _airQualityService.fetchAirQuality();
-      setState(() {
-        _airQuality = aqi;
-        _isLoading = false;
-      });
-      _animationController.forward(from: 0.0);
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
-    }
   }
 
   Color _getAqiColor(double aqi) {
@@ -72,12 +183,127 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
     return 'Poor';
   }
 
-  Widget _buildStatCard(String title, double value, String unit, IconData icon) {
+  String _formatTime(String isoString) {
+    if (isoString.isEmpty) return '--:--';
+    try {
+      final dt = DateTime.parse(isoString);
+      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    } catch (_) {
+      return '--:--';
+    }
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ShaderMask(
+            shaderCallback: (bounds) => const LinearGradient(
+              colors: [Color(0xFFEC4899), Color(0xFF7F77DD)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ).createShader(bounds),
+            child: const Icon(
+              Icons.travel_explore_rounded,
+              size: 120,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 32),
+          const Text(
+            'Discover Atmosphere',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Search for a city to view live\nweather and air quality data.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Colors.white54,
+              fontSize: 16,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 48),
+          ElevatedButton.icon(
+            onPressed: _openSearchSheet,
+            icon: const Icon(Icons.search),
+            label: const Text('Search City'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEC4899).withOpacity(0.2),
+              foregroundColor: const Color(0xFFEC4899),
+              elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(24),
+                side: const BorderSide(color: Color(0xFFEC4899)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSmallStatCard(String title, String value, IconData icon, Color accentColor) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.white.withOpacity(0.1)),
+          ),
+          child: Row(
+            children: [
+              Icon(icon, color: accentColor.withOpacity(0.8), size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.5),
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      value,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAqiStatCard(String title, double value, String unit, IconData icon) {
     return Expanded(
       child: ClipRRect(
         borderRadius: BorderRadius.circular(20),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -137,7 +363,6 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
   @override
   Widget build(BuildContext context) {
     const Color accentColor = Color(0xFFEC4899);
-    const Color nearBlack = Color(0xFF0A0A12);
 
     return Container(
       decoration: AppTheme.spaceBackground,
@@ -145,191 +370,391 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
         backgroundColor: Colors.transparent,
         body: Stack(
           children: [
-            // States
-            if (_isLoading)
-              const Center(
-                child: CircularProgressIndicator(color: accentColor),
-              )
-            else if (_error != null)
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline, color: Colors.redAccent, size: 48),
-                    const SizedBox(height: 16),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                      child: Text(
-                        _error!,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white70),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    ElevatedButton(
-                      onPressed: _loadAirQuality,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: accentColor,
-                        foregroundColor: nearBlack,
-                      ),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              )
-            else if (_airQuality != null)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Header
-                  SafeArea(
-                    bottom: false,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 16.0, left: 72.0, right: 24.0, bottom: 16.0),
-                      child: Hero(
-                        tag: 'air_pulse_hero',
-                        child: Material(
-                          color: Colors.transparent,
-                          child: Text(
-                            'Air Pulse',
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
+            Column(
+              children: [
+                // Header
+                SafeArea(
+                  bottom: false,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                    child: Row(
+                      children: [
+                        Hero(
+                          tag: 'air_pulse_hero',
+                          child: ClipOval(
+                            child: BackdropFilter(
+                              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                              child: Container(
+                                width: 44,
+                                height: 44,
+                                color: Colors.black.withOpacity(0.3),
+                                child: IconButton(
+                                  icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
+                                  onPressed: () => Navigator.of(context).pop(),
+                                ),
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                    ),
-                  ),
-                  
-                  // Main Content
-                  Expanded(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
-                      child: Column(
-                        children: [
-                          // Gauge
-                          AnimatedBuilder(
-                            animation: _animation,
-                            builder: (context, child) {
-                              final aqi = _airQuality!.europeanAqi;
-                              final normalizedValue = math.min(aqi / 100.0, 1.0);
-                              final animatedValue = normalizedValue * _animation.value;
-                              final activeColor = _getAqiColor(aqi);
-
-                              return SizedBox(
-                                width: 280,
-                                height: 280,
-                                child: Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    CustomPaint(
-                                      size: const Size(280, 280),
-                                      painter: AqiGaugePainter(
-                                        value: animatedValue,
-                                        activeColor: activeColor,
-                                      ),
-                                    ),
-                                    Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          (aqi * _animation.value).toInt().toString(),
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 64,
-                                            fontWeight: FontWeight.w800,
-                                            shadows: [
-                                              Shadow(
-                                                color: activeColor.withOpacity(0.5),
-                                                blurRadius: 20,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                        Text(
-                                          _getAqiLabel(aqi),
-                                          style: TextStyle(
-                                            color: activeColor,
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w600,
-                                            letterSpacing: 1.2,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          'AQI',
-                                          style: TextStyle(
-                                            color: Colors.white.withOpacity(0.4),
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                            letterSpacing: 1.5,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                          
-                          const SizedBox(height: 32),
-
-                          // Cards
-                          Row(
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              _buildStatCard('PM2.5', _airQuality!.pm2_5, 'µg/m³', Icons.masks_outlined),
-                              const SizedBox(width: 16),
-                              _buildStatCard('PM10', _airQuality!.pm10, 'µg/m³', Icons.blur_on),
-                            ],
-                          ),
-                          
-                          const SizedBox(height: 32),
-                          
-                          // Location Context
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.location_on, color: Colors.white.withOpacity(0.4), size: 16),
-                              const SizedBox(width: 6),
                               Text(
-                                'Indore / Bhopal region',
+                                _currentLocation?.name ?? 'Air Pulse',
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                _currentLocation?.country ?? 'Global Weather & AQI',
                                 style: TextStyle(
                                   color: Colors.white.withOpacity(0.5),
                                   fontSize: 14,
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ],
                           ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-            // Safe-area aware back button
-            SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.only(left: 16.0, top: 16.0),
-                child: ClipOval(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Container(
-                      color: Colors.black.withOpacity(0.3),
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.search, color: Colors.white),
+                          onPressed: _openSearchSheet,
+                        ),
+                        if (_currentLocation != null)
+                          IconButton(
+                            icon: const Icon(Icons.star_border, color: Colors.white),
+                            onPressed: _saveCurrentLocation,
+                          ),
+                      ],
                     ),
                   ),
                 ),
-              ),
+
+                // Saved Locations Chips
+                if (_savedLocations.isNotEmpty)
+                  SizedBox(
+                    height: 48,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      itemCount: _savedLocations.length,
+                      itemBuilder: (context, index) {
+                        final loc = _savedLocations[index];
+                        final isSelected = _currentLocation != null && loc.name == _currentLocation!.name && loc.country == _currentLocation!.country;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
+                          child: ActionChip(
+                            backgroundColor: isSelected ? accentColor.withOpacity(0.2) : Colors.white.withOpacity(0.05),
+                            side: BorderSide(color: isSelected ? accentColor : Colors.white.withOpacity(0.1)),
+                            label: Text(loc.name, style: TextStyle(color: isSelected ? accentColor : Colors.white70)),
+                            onPressed: () async {
+                              await _locationStorageService.saveLastLocation(loc);
+                              if (mounted) {
+                                setState(() {
+                                  _currentLocation = loc;
+                                });
+                                _fetchData();
+                              }
+                            },
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                
+                // Main Content Area
+                Expanded(
+                  child: _isLoading
+                      ? const LoadingState(accentColor: accentColor)
+                      : _error != null
+                          ? ErrorState(
+                              accentColor: accentColor,
+                              message: _error!,
+                              onRetry: _fetchData,
+                            )
+                          : _currentLocation == null
+                              ? _buildEmptyState()
+                              : _weather != null && _airQuality != null
+                              ? SingleChildScrollView(
+                                  physics: const BouncingScrollPhysics(),
+                                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                                  child: Column(
+                                    children: [
+                                      // Weather Summary Card
+                                      ClipRRect(
+                                        borderRadius: BorderRadius.circular(24),
+                                        child: BackdropFilter(
+                                          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(24),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withOpacity(0.05),
+                                              borderRadius: BorderRadius.circular(24),
+                                              border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      '${_weather!.temperature.toStringAsFixed(1)}°',
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 56,
+                                                        fontWeight: FontWeight.bold,
+                                                        height: 1.1,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      'Feels like ${_weather!.feelsLike.toStringAsFixed(1)}°',
+                                                      style: TextStyle(
+                                                        color: Colors.white.withOpacity(0.6),
+                                                        fontSize: 16,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                                  children: [
+                                                    Icon(_weather!.conditionIcon, color: accentColor, size: 48),
+                                                    const SizedBox(height: 8),
+                                                    Text(
+                                                      _weather!.conditionLabel,
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 18,
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 16),
+
+                                      // Weather Stats Grid
+                                      GridView.count(
+                                        crossAxisCount: 2,
+                                        shrinkWrap: true,
+                                        physics: const NeverScrollableScrollPhysics(),
+                                        mainAxisSpacing: 16,
+                                        crossAxisSpacing: 16,
+                                        childAspectRatio: 2.2,
+                                        children: [
+                                          _buildSmallStatCard('Humidity', '${_weather!.humidity.toStringAsFixed(0)}%', Icons.water_drop_outlined, accentColor),
+                                          _buildSmallStatCard('Wind', '${_weather!.windSpeed.toStringAsFixed(1)} km/h', Icons.air, accentColor),
+                                          _buildSmallStatCard('UV Index', _weather!.uvIndexMax.toStringAsFixed(1), Icons.wb_sunny_outlined, accentColor),
+                                          _buildSmallStatCard('Sun', '${_formatTime(_weather!.sunrise)} / ${_formatTime(_weather!.sunset)}', Icons.wb_twilight, accentColor),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 32),
+
+                                      // AQI Gauge
+                                      AnimatedBuilder(
+                                        animation: _animation,
+                                        builder: (context, child) {
+                                          final aqi = _airQuality!.europeanAqi;
+                                          final normalizedValue = math.min(aqi / 100.0, 1.0);
+                                          final animatedValue = normalizedValue * _animation.value;
+                                          final activeColor = _getAqiColor(aqi);
+
+                                          return SizedBox(
+                                            width: 240,
+                                            height: 240,
+                                            child: Stack(
+                                              alignment: Alignment.center,
+                                              children: [
+                                                CustomPaint(
+                                                  size: const Size(240, 240),
+                                                  painter: AqiGaugePainter(
+                                                    value: animatedValue,
+                                                    activeColor: activeColor,
+                                                  ),
+                                                ),
+                                                Column(
+                                                  mainAxisSize: MainAxisSize.min,
+                                                  children: [
+                                                    Text(
+                                                      (aqi * _animation.value).toInt().toString(),
+                                                      style: TextStyle(
+                                                        color: Colors.white,
+                                                        fontSize: 56,
+                                                        fontWeight: FontWeight.w800,
+                                                        shadows: [
+                                                          Shadow(
+                                                            color: activeColor.withOpacity(0.5),
+                                                            blurRadius: 20,
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      _getAqiLabel(aqi),
+                                                      style: TextStyle(
+                                                        color: activeColor,
+                                                        fontSize: 16,
+                                                        fontWeight: FontWeight.w600,
+                                                        letterSpacing: 1.2,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Text(
+                                                      'AQI',
+                                                      style: TextStyle(
+                                                        color: Colors.white.withOpacity(0.4),
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight.w500,
+                                                        letterSpacing: 1.5,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                      
+                                      const SizedBox(height: 32),
+
+                                      // AQI Cards
+                                      Row(
+                                        children: [
+                                          _buildAqiStatCard('PM2.5', _airQuality!.pm2_5, 'µg/m³', Icons.masks_outlined),
+                                          const SizedBox(width: 16),
+                                          _buildAqiStatCard('PM10', _airQuality!.pm10, 'µg/m³', Icons.blur_on),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : const SizedBox.shrink(),
+                ),
+              ],
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _SearchBottomSheet extends StatefulWidget {
+  final Function(LocationModel) onSelect;
+  const _SearchBottomSheet({required this.onSelect});
+
+  @override
+  State<_SearchBottomSheet> createState() => _SearchBottomSheetState();
+}
+
+class _SearchBottomSheetState extends State<_SearchBottomSheet> {
+  final GeocodingService _geocodingService = GeocodingService();
+  Timer? _debounce;
+  List<LocationModel> _searchResults = [];
+  bool _isSearching = false;
+
+  void _onSearchChanged(String query) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 400), () async {
+      if (query.trim().isEmpty) {
+        if (mounted) {
+          setState(() {
+            _searchResults = [];
+            _isSearching = false;
+          });
+        }
+        return;
+      }
+      
+      if (mounted) setState(() => _isSearching = true);
+      try {
+        final results = await _geocodingService.searchCities(query);
+        if (mounted) setState(() => _searchResults = results);
+      } catch (e) {
+        // ignore
+      } finally {
+        if (mounted) setState(() => _isSearching = false);
+      }
+    });
+  }
+  
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.8,
+      padding: EdgeInsets.only(
+        top: 24,
+        left: 24,
+        right: 24,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFF13131E),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+        border: Border.all(color: const Color(0xFFEC4899).withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          TextField(
+            autofocus: true,
+            style: const TextStyle(color: Colors.white),
+            decoration: InputDecoration(
+              hintText: 'Search city...',
+              hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
+              filled: true,
+              fillColor: Colors.white.withOpacity(0.05),
+              prefixIcon: const Icon(Icons.search, color: Color(0xFFEC4899)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(16),
+                borderSide: BorderSide.none,
+              ),
+            ),
+            onChanged: _onSearchChanged,
+          ),
+          const SizedBox(height: 16),
+          if (_isSearching)
+            const Padding(
+              padding: EdgeInsets.all(32.0),
+              child: CircularProgressIndicator(color: Color(0xFFEC4899)),
+            )
+          else
+            Expanded(
+              child: ListView.builder(
+                itemCount: _searchResults.length,
+                itemBuilder: (context, index) {
+                  final loc = _searchResults[index];
+                  return ListTile(
+                    leading: const Icon(Icons.location_city, color: Colors.white54),
+                    title: Text(loc.name, style: const TextStyle(color: Colors.white)),
+                    subtitle: Text(loc.country, style: TextStyle(color: Colors.white.withOpacity(0.5))),
+                    onTap: () {
+                      Navigator.pop(context);
+                      widget.onSelect(loc);
+                    },
+                  );
+                },
+              ),
+            ),
+        ],
       ),
     );
   }
