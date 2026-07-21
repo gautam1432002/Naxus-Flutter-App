@@ -33,7 +33,7 @@ class ApodHeroCard extends StatelessWidget {
               child: BackdropFilter(
                 filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
                 child: Container(
-                  color: const Color(0xFF0A0A0C).withOpacity(0.7),
+                  color: const Color(0xFF0A0A0C).withValues(alpha: 0.7),
                   child: ListView(
                     controller: scrollController,
                     padding: const EdgeInsets.all(24),
@@ -43,7 +43,7 @@ class ApodHeroCard extends StatelessWidget {
                           width: 40,
                           height: 4,
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.3),
+                            color: Colors.white.withValues(alpha: 0.3),
                             borderRadius: BorderRadius.circular(2),
                           ),
                         ),
@@ -67,7 +67,7 @@ class ApodHeroCard extends StatelessWidget {
                       Text(
                         apod.explanation,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.85),
+                          color: Colors.white.withValues(alpha: 0.85),
                           fontSize: 16,
                           height: 1.6,
                         ),
@@ -138,7 +138,7 @@ class ApodHeroCard extends StatelessWidget {
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, const Color(0xFF0A0A0C).withOpacity(0.95)],
+                    colors: [Colors.transparent, const Color(0xFF0A0A0C).withValues(alpha: 0.95)],
                   ),
                 ),
               ),
@@ -151,9 +151,9 @@ class ApodHeroCard extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
+                  color: Colors.black.withValues(alpha: 0.5),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.2)),
+                  border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                 ),
                 child: Text(
                   apod.date,
@@ -169,7 +169,7 @@ class ApodHeroCard extends StatelessWidget {
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF8B5CF6).withOpacity(0.2),
+                    color: const Color(0xFF8B5CF6).withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: const Color(0xFF8B5CF6)),
                   ),
@@ -216,7 +216,7 @@ class ApodHeroCard extends StatelessWidget {
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      color: Colors.white.withOpacity(0.7),
+                      color: Colors.white.withValues(alpha: 0.7),
                       fontSize: 14,
                       height: 1.5,
                     ),
@@ -226,7 +226,7 @@ class ApodHeroCard extends StatelessWidget {
                     onPressed: () => _openArticle(context),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.white,
-                      side: BorderSide(color: Colors.white.withOpacity(0.5)),
+                      side: BorderSide(color: Colors.white.withValues(alpha: 0.5)),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
                       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                     ),

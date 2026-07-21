@@ -1,10 +1,10 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/apod_model.dart';
+import 'api_client.dart';
 
 class NasaService {
   static const String _baseUrl = 'https://api.nasa.gov/planetary/apod';
+  final ApiClient _apiClient = ApiClient();
 
   Future<ApodModel> fetchApod({String? date}) async {
     final apiKey = dotenv.env['NASA_API_KEY'];
@@ -12,23 +12,13 @@ class NasaService {
       throw Exception('NASA_API_KEY is missing or invalid in .env file.');
     }
 
-    try {
-      String url = '$_baseUrl?api_key=$apiKey';
-      if (date != null) {
-        url += '&date=$date';
-      }
-      
-      final response = await http.get(Uri.parse(url));
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        return ApodModel.fromJson(data);
-      } else {
-        throw Exception('Failed to load APOD: HTTP ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Network or parsing error: $e');
+    String url = '$_baseUrl?api_key=$apiKey';
+    if (date != null) {
+      url += '&date=$date';
     }
+    
+    final response = await _apiClient.getJson(url, cacheKey: date != null ? 'apod_$date' : 'apod_today');
+    return ApodModel.fromJson(response.data);
   }
 
   Future<List<ApodModel>> fetchApodRange() async {
@@ -46,18 +36,13 @@ class NasaService {
     final startStr = format(startDate);
     final endStr = format(endDate);
 
-    try {
-      final response = await http.get(Uri.parse('$_baseUrl?api_key=$apiKey&start_date=$startStr&end_date=$endStr'));
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = json.decode(response.body);
-        final list = data.map((json) => ApodModel.fromJson(json as Map<String, dynamic>)).toList();
-        return list.reversed.toList();
-      } else {
-        throw Exception('Failed to load APOD range: HTTP ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Network or parsing error: $e');
-    }
+    final response = await _apiClient.getJson(
+      '$_baseUrl?api_key=$apiKey&start_date=$startStr&end_date=$endStr',
+      cacheKey: 'apod_range_${startStr}_$endStr',
+    );
+    
+    final List<dynamic> data = response.data;
+    final list = data.map((json) => ApodModel.fromJson(json as Map<String, dynamic>)).toList();
+    return list.reversed.toList();
   }
 }

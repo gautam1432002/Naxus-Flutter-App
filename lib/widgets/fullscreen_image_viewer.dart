@@ -39,7 +39,7 @@ class FullscreenImageViewer extends StatelessWidget {
                   child: Container(
                     width: 44,
                     height: 44,
-                    color: Colors.white.withOpacity(0.1),
+                    color: Colors.white.withValues(alpha: 0.1),
                     child: IconButton(
                       icon: const Icon(Icons.close, color: Colors.white),
                       onPressed: () => Navigator.of(context).pop(),

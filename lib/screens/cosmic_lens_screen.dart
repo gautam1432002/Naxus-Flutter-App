@@ -4,10 +4,12 @@ import '../models/apod_model.dart';
 import '../services/nasa_service.dart';
 import '../services/connectivity_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/loading_state.dart';
+import '../widgets/skeleton_loader.dart';
 import '../widgets/error_state.dart';
+import '../widgets/frosted_back_button.dart';
 import '../widgets/apod_hero_card.dart';
 import 'apod_detail_screen.dart';
+import '../services/app_data_store.dart';
 
 class CosmicLensScreen extends StatefulWidget {
   const CosmicLensScreen({super.key});
@@ -33,10 +35,20 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
   }
 
   Future<void> _loadData() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    final store = AppDataStore();
+    if (store.todayApod != null) {
+      if (mounted) {
+        setState(() {
+          _todayApod = store.todayApod;
+          _isLoading = false;
+        });
+      }
+    } else {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
 
     final hasConnection = await _connectivityService.hasInternetConnection();
     if (!hasConnection) {
@@ -99,7 +111,7 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [Colors.transparent, const Color(0xFF0A0A0C).withOpacity(0.9)],
+                      colors: [Colors.transparent, const Color(0xFF0A0A0C).withValues(alpha: 0.9)],
                     ),
                   ),
                 ),
@@ -112,7 +124,7 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.1),
+                        color: Colors.white.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: const Text('Archive', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
@@ -127,7 +139,7 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
                     const SizedBox(height: 4),
                     Text(
                       apod.date,
-                      style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12),
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
                     ),
                   ],
                 ),
@@ -146,7 +158,7 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
     return Container(
       decoration: AppTheme.spaceBackground,
       child: Scaffold(
-        backgroundColor: const Color(0xFF0A0A0C).withOpacity(0.5),
+        backgroundColor: const Color(0xFF0A0A0C).withValues(alpha: 0.5),
         body: Column(
           children: [
             // App Bar
@@ -157,23 +169,7 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Hero(
-                      tag: 'cosmic_lens_hero',
-                      child: ClipOval(
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            color: Colors.black.withOpacity(0.3),
-                            child: IconButton(
-                              icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
-                              onPressed: () => Navigator.of(context).pop(),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
+                    const FrostedBackButton(heroTag: 'cosmic_lens_hero'),
                     const Text(
                       'COSMIC LENS',
                       style: TextStyle(color: Colors.white, letterSpacing: 2, fontWeight: FontWeight.bold, fontSize: 14),
@@ -193,7 +189,27 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
             // Content
             Expanded(
               child: _isLoading
-                  ? const LoadingState(accentColor: accentColor)
+                  ? SingleChildScrollView(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SkeletonLoader(width: double.infinity, height: 380, borderRadius: 24),
+                          const SizedBox(height: 32),
+                          const SkeletonLoader(width: 150, height: 24),
+                          const SizedBox(height: 16),
+                          const SkeletonLoader(width: double.infinity, height: 220, borderRadius: 16),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: const [
+                              Expanded(child: SkeletonLoader(width: double.infinity, height: 250, borderRadius: 16)),
+                              SizedBox(width: 16),
+                              Expanded(child: SkeletonLoader(width: double.infinity, height: 250, borderRadius: 16)),
+                            ],
+                          ),
+                        ],
+                      ),
+                    )
                   : _error != null
                       ? ErrorState(accentColor: accentColor, message: _error!, onRetry: _loadData)
                       : SingleChildScrollView(

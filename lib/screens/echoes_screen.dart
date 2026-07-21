@@ -4,8 +4,10 @@ import '../models/history_event_model.dart';
 import '../services/wiki_service.dart';
 import '../services/connectivity_service.dart';
 import '../theme/app_theme.dart';
-import '../widgets/loading_state.dart';
+import '../widgets/skeleton_loader.dart';
 import '../widgets/error_state.dart';
+import '../widgets/frosted_back_button.dart';
+import '../services/app_data_store.dart';
 
 class EchoesScreen extends StatefulWidget {
   const EchoesScreen({super.key});
@@ -28,10 +30,20 @@ class _EchoesScreenState extends State<EchoesScreen> {
   }
 
   Future<void> _loadEvents() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    final store = AppDataStore();
+    if (store.historyEvents != null) {
+      if (mounted) {
+        setState(() {
+          _events = store.historyEvents;
+          _isLoading = false;
+        });
+      }
+    } else {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
 
     final hasConnection = await _connectivityService.hasInternetConnection();
     if (!hasConnection) {
@@ -80,7 +92,72 @@ class _EchoesScreenState extends State<EchoesScreen> {
           children: [
             // States
             if (_isLoading)
-              const LoadingState(accentColor: accentColor)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  SafeArea(
+                    bottom: false,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 16.0, left: 72.0, right: 24.0, bottom: 16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: const [
+                          SkeletonLoader(width: 80, height: 16),
+                          SizedBox(height: 8),
+                          SkeletonLoader(width: 200, height: 32),
+                        ],
+                      ),
+                    ),
+                  ),
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 32.0, top: 8.0),
+                      itemCount: 4,
+                      itemBuilder: (context, index) {
+                        return IntrinsicHeight(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              SizedBox(
+                                width: 72,
+                                child: Column(
+                                  children: [
+                                    const SizedBox(height: 24),
+                                    const SkeletonLoader(width: 48, height: 24, borderRadius: 12),
+                                    if (index < 3)
+                                      Expanded(
+                                        child: Container(
+                                          width: 2,
+                                          margin: const EdgeInsets.only(top: 8),
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              begin: Alignment.topCenter,
+                                              end: Alignment.bottomCenter,
+                                              colors: [
+                                                Colors.white.withValues(alpha: 0.1),
+                                                Colors.transparent,
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              const Expanded(
+                                child: Padding(
+                                  padding: EdgeInsets.only(right: 24.0, bottom: 24.0),
+                                  child: SkeletonLoader(width: double.infinity, height: 120, borderRadius: 16),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              )
             else if (_error != null)
               ErrorState(
                 accentColor: accentColor,
@@ -102,7 +179,7 @@ class _EchoesScreenState extends State<EchoesScreen> {
                           Text(
                             _getFormattedDate(),
                             style: TextStyle(
-                              color: Colors.white.withOpacity(0.5),
+                              color: Colors.white.withValues(alpha: 0.5),
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 1.2,
@@ -149,9 +226,9 @@ class _EchoesScreenState extends State<EchoesScreen> {
                                       width: 48,
                                       height: 24,
                                       decoration: BoxDecoration(
-                                        color: accentColor.withOpacity(0.15),
+                                        color: accentColor.withValues(alpha: 0.15),
                                         borderRadius: BorderRadius.circular(12),
-                                        border: Border.all(color: accentColor.withOpacity(0.3)),
+                                        border: Border.all(color: accentColor.withValues(alpha: 0.3)),
                                       ),
                                       alignment: Alignment.center,
                                       child: Text(
@@ -173,8 +250,8 @@ class _EchoesScreenState extends State<EchoesScreen> {
                                               begin: Alignment.topCenter,
                                               end: Alignment.bottomCenter,
                                               colors: [
-                                                accentColor.withOpacity(0.5),
-                                                accentColor.withOpacity(0.1),
+                                                accentColor.withValues(alpha: 0.5),
+                                                accentColor.withValues(alpha: 0.1),
                                               ],
                                             ),
                                           ),
@@ -195,9 +272,9 @@ class _EchoesScreenState extends State<EchoesScreen> {
                                       child: Container(
                                         padding: const EdgeInsets.all(16),
                                         decoration: BoxDecoration(
-                                          color: Colors.white.withOpacity(0.05),
+                                          color: Colors.white.withValues(alpha: 0.05),
                                           borderRadius: BorderRadius.circular(16),
-                                          border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                                         ),
                                         child: Row(
                                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -206,7 +283,7 @@ class _EchoesScreenState extends State<EchoesScreen> {
                                               child: Text(
                                                 event.text,
                                                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                  color: Colors.white.withOpacity(0.9),
+                                                  color: Colors.white.withValues(alpha: 0.9),
                                                   height: 1.5,
                                                 ),
                                               ),
@@ -244,20 +321,7 @@ class _EchoesScreenState extends State<EchoesScreen> {
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.only(left: 16.0, top: 16.0),
-                child: ClipOval(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                    child: Container(
-                      width: 44,
-                      height: 44,
-                      color: Colors.black.withOpacity(0.3),
-                      child: IconButton(
-                        icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
-                        onPressed: () => Navigator.of(context).pop(),
-                      ),
-                    ),
-                  ),
-                ),
+                child: const FrostedBackButton(heroTag: 'echoes_back_hero'),
               ),
             ),
           ],

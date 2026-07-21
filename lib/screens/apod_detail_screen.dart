@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/apod_model.dart';
 import '../theme/app_theme.dart';
 import '../widgets/apod_hero_card.dart';
+import '../widgets/frosted_back_button.dart';
 
 class ApodDetailScreen extends StatelessWidget {
   final ApodModel apod;
@@ -24,20 +25,7 @@ class ApodDetailScreen extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
                 child: Row(
                   children: [
-                    ClipOval(
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                        child: Container(
-                          width: 44,
-                          height: 44,
-                          color: Colors.black.withOpacity(0.3),
-                          child: IconButton(
-                            icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
-                            onPressed: () => Navigator.of(context).pop(),
-                          ),
-                        ),
-                      ),
-                    ),
+                    const FrostedBackButton(heroTag: 'apod_detail_back_hero'),
                     const Expanded(
                       child: Center(
                         child: Text(

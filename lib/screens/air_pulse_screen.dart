@@ -14,8 +14,10 @@ import '../services/location_storage_service.dart';
 import '../services/connectivity_service.dart';
 
 import '../theme/app_theme.dart';
-import '../widgets/loading_state.dart';
+import '../widgets/skeleton_loader.dart';
 import '../widgets/error_state.dart';
+import '../widgets/frosted_back_button.dart';
+import '../services/app_data_store.dart';
 
 class AirPulseScreen extends StatefulWidget {
   const AirPulseScreen({super.key});
@@ -91,10 +93,22 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
   Future<void> _fetchData() async {
     if (_currentLocation == null) return;
     
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+    final store = AppDataStore();
+    if (store.airQuality != null && store.weather != null) {
+      if (mounted) {
+        setState(() {
+          _weather = store.weather;
+          _airQuality = store.airQuality;
+          _isLoading = false;
+        });
+        _animationController.forward(from: 0.0);
+      }
+    } else {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
 
     final hasConnection = await _connectivityService.hasInternetConnection();
     if (!hasConnection) {
@@ -236,7 +250,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
             icon: const Icon(Icons.search),
             label: const Text('Search City'),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEC4899).withOpacity(0.2),
+              backgroundColor: const Color(0xFFEC4899).withValues(alpha: 0.2),
               foregroundColor: const Color(0xFFEC4899),
               elevation: 0,
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
@@ -259,13 +273,13 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.05),
+            color: Colors.white.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.white.withOpacity(0.1)),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
           ),
           child: Row(
             children: [
-              Icon(icon, color: accentColor.withOpacity(0.8), size: 24),
+              Icon(icon, color: accentColor.withValues(alpha: 0.8), size: 24),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -275,7 +289,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
                     Text(
                       title,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.5),
+                        color: Colors.white.withValues(alpha: 0.5),
                         fontSize: 12,
                       ),
                     ),
@@ -307,9 +321,9 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
           child: Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.05),
+              color: Colors.white.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -321,7 +335,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
                     Text(
                       title,
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.7),
+                        color: Colors.white.withValues(alpha: 0.7),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -345,7 +359,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
                       child: Text(
                         unit,
                         style: TextStyle(
-                          color: Colors.white.withOpacity(0.5),
+                          color: Colors.white.withValues(alpha: 0.5),
                           fontSize: 12,
                         ),
                       ),
@@ -379,23 +393,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
                     padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
                     child: Row(
                       children: [
-                        Hero(
-                          tag: 'air_pulse_hero',
-                          child: ClipOval(
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                              child: Container(
-                                width: 44,
-                                height: 44,
-                                color: Colors.black.withOpacity(0.3),
-                                child: IconButton(
-                                  icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
-                                  onPressed: () => Navigator.of(context).pop(),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
+                        const FrostedBackButton(heroTag: 'air_pulse_hero'),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
@@ -413,7 +411,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
                               Text(
                                 _currentLocation?.country ?? 'Global Weather & AQI',
                                 style: TextStyle(
-                                  color: Colors.white.withOpacity(0.5),
+                                  color: Colors.white.withValues(alpha: 0.5),
                                   fontSize: 14,
                                 ),
                                 maxLines: 1,
@@ -450,8 +448,8 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
                         return Padding(
                           padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
                           child: ActionChip(
-                            backgroundColor: isSelected ? accentColor.withOpacity(0.2) : Colors.white.withOpacity(0.05),
-                            side: BorderSide(color: isSelected ? accentColor : Colors.white.withOpacity(0.1)),
+                            backgroundColor: isSelected ? accentColor.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.05),
+                            side: BorderSide(color: isSelected ? accentColor : Colors.white.withValues(alpha: 0.1)),
                             label: Text(loc.name, style: TextStyle(color: isSelected ? accentColor : Colors.white70)),
                             onPressed: () async {
                               await _locationStorageService.saveLastLocation(loc);
@@ -471,7 +469,34 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
                 // Main Content Area
                 Expanded(
                   child: _isLoading
-                      ? const LoadingState(accentColor: accentColor)
+                      ? SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                          child: Column(
+                            children: [
+                              const SkeletonLoader(width: double.infinity, height: 140, borderRadius: 24),
+                              const SizedBox(height: 16),
+                              GridView.count(
+                                crossAxisCount: 2,
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                mainAxisSpacing: 16,
+                                crossAxisSpacing: 16,
+                                childAspectRatio: 2.2,
+                                children: List.generate(4, (_) => const SkeletonLoader(width: double.infinity, height: 60, borderRadius: 16)),
+                              ),
+                              const SizedBox(height: 32),
+                              const SkeletonLoader(width: 240, height: 240, shape: BoxShape.circle),
+                              const SizedBox(height: 32),
+                              Row(
+                                children: const [
+                                  Expanded(child: SkeletonLoader(width: double.infinity, height: 100, borderRadius: 20)),
+                                  SizedBox(width: 16),
+                                  Expanded(child: SkeletonLoader(width: double.infinity, height: 100, borderRadius: 20)),
+                                ],
+                              ),
+                            ],
+                          ),
+                        )
                       : _error != null
                           ? ErrorState(
                               accentColor: accentColor,
@@ -494,9 +519,9 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
                                           child: Container(
                                             padding: const EdgeInsets.all(24),
                                             decoration: BoxDecoration(
-                                              color: Colors.white.withOpacity(0.05),
+                                              color: Colors.white.withValues(alpha: 0.05),
                                               borderRadius: BorderRadius.circular(24),
-                                              border: Border.all(color: Colors.white.withOpacity(0.1)),
+                                              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
                                             ),
                                             child: Row(
                                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -517,7 +542,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
                                                     Text(
                                                       'Feels like ${_weather!.feelsLike.toStringAsFixed(1)}°',
                                                       style: TextStyle(
-                                                        color: Colors.white.withOpacity(0.6),
+                                                        color: Colors.white.withValues(alpha: 0.6),
                                                         fontSize: 16,
                                                       ),
                                                     ),
@@ -595,7 +620,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
                                                         fontWeight: FontWeight.w800,
                                                         shadows: [
                                                           Shadow(
-                                                            color: activeColor.withOpacity(0.5),
+                                                            color: activeColor.withValues(alpha: 0.5),
                                                             blurRadius: 20,
                                                           ),
                                                         ],
@@ -614,7 +639,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
                                                     Text(
                                                       'AQI',
                                                       style: TextStyle(
-                                                        color: Colors.white.withOpacity(0.4),
+                                                        color: Colors.white.withValues(alpha: 0.4),
                                                         fontSize: 12,
                                                         fontWeight: FontWeight.w500,
                                                         letterSpacing: 1.5,
@@ -710,7 +735,7 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
       decoration: BoxDecoration(
         color: const Color(0xFF13131E),
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        border: Border.all(color: const Color(0xFFEC4899).withOpacity(0.2)),
+        border: Border.all(color: const Color(0xFFEC4899).withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
@@ -719,9 +744,9 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
             style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
               hintText: 'Search city...',
-              hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
+              hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.4)),
               filled: true,
-              fillColor: Colors.white.withOpacity(0.05),
+              fillColor: Colors.white.withValues(alpha: 0.05),
               prefixIcon: const Icon(Icons.search, color: Color(0xFFEC4899)),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -745,7 +770,7 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
                   return ListTile(
                     leading: const Icon(Icons.location_city, color: Colors.white54),
                     title: Text(loc.name, style: const TextStyle(color: Colors.white)),
-                    subtitle: Text(loc.country, style: TextStyle(color: Colors.white.withOpacity(0.5))),
+                    subtitle: Text(loc.country, style: TextStyle(color: Colors.white.withValues(alpha: 0.5))),
                     onTap: () {
                       Navigator.pop(context);
                       widget.onSelect(loc);
@@ -775,7 +800,7 @@ class AqiGaugePainter extends CustomPainter {
 
     // Background track
     final trackPaint = Paint()
-      ..color = Colors.white.withOpacity(0.08)
+      ..color = Colors.white.withValues(alpha: 0.08)
       ..strokeWidth = 14
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -788,7 +813,7 @@ class AqiGaugePainter extends CustomPainter {
     if (value > 0) {
       // Glow
       final glowPaint = Paint()
-        ..color = activeColor.withOpacity(0.35)
+        ..color = activeColor.withValues(alpha: 0.35)
         ..strokeWidth = 28
         ..style = PaintingStyle.stroke
         ..strokeCap = StrokeCap.round

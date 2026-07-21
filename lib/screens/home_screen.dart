@@ -6,6 +6,7 @@ import 'cosmic_lens_screen.dart';
 import 'echoes_screen.dart';
 import 'air_pulse_screen.dart';
 import 'orbit_watch_screen.dart';
+import '../services/app_data_store.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -22,6 +23,9 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     // 0.65 fraction accurately matches the hit-test areas for the side cards
     _pageController = PageController(viewportFraction: 0.65);
+    
+    // Kick off background data prefetching
+    AppDataStore().prefetchAll();
   }
 
   @override
@@ -244,14 +248,14 @@ class StarfieldPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final random = Random(42); 
-    final paint = Paint()..color = Colors.white.withOpacity(0.3);
+    final paint = Paint()..color = Colors.white.withValues(alpha: 0.3);
 
     for (int i = 0; i < 150; i++) {
       final x = random.nextDouble() * size.width;
       final y = random.nextDouble() * size.height;
       final radius = random.nextDouble() * 1.5;
       
-      paint.color = Colors.white.withOpacity(random.nextDouble() * 0.4 + 0.1);
+      paint.color = Colors.white.withValues(alpha: random.nextDouble() * 0.4 + 0.1);
       
       canvas.drawCircle(Offset(x, y), radius, paint);
     }

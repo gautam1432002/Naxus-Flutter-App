@@ -9,6 +9,8 @@ import '../services/connectivity_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/loading_state.dart';
 import '../widgets/error_state.dart';
+import '../widgets/frosted_back_button.dart';
+import '../services/app_data_store.dart';
 
 class OrbitWatchScreen extends StatefulWidget {
   const OrbitWatchScreen({super.key});
@@ -46,6 +48,15 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
   }
 
   Future<void> _initFetch() async {
+    final store = AppDataStore();
+    if (store.issPosition != null) {
+      if (mounted) {
+        setState(() {
+          _issPosition = store.issPosition;
+          _isLoading = false;
+        });
+      }
+    }
     final hasConnection = await _connectivityService.hasInternetConnection();
     if (!hasConnection) {
       if (mounted) {
@@ -201,7 +212,7 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                                   height: 48 * _pulseAnimation.value,
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
-                                    color: accentColor.withOpacity(0.3 * (1.6 - _pulseAnimation.value)),
+                                    color: accentColor.withValues(alpha: 0.3 * (1.6 - _pulseAnimation.value)),
                                   ),
                                 ),
                                 // Inner icon
@@ -214,7 +225,7 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                                     border: Border.all(color: accentColor, width: 2),
                                     boxShadow: [
                                       BoxShadow(
-                                        color: accentColor.withOpacity(0.6),
+                                        color: accentColor.withValues(alpha: 0.6),
                                         blurRadius: 8,
                                       ),
                                     ],
@@ -246,23 +257,7 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.only(left: 16.0, top: 16.0),
-                child: Hero(
-                  tag: 'orbit_watch_hero',
-                  child: ClipOval(
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                      child: Container(
-                        width: 44,
-                        height: 44,
-                        color: Colors.black.withOpacity(0.3),
-                        child: IconButton(
-                          icon: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
-                          onPressed: () => Navigator.of(context).pop(),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+                child: const FrostedBackButton(heroTag: 'orbit_watch_hero'),
               ),
             ),
 
@@ -280,12 +275,12 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                         child: Container(
                           padding: const EdgeInsets.all(24),
                           decoration: BoxDecoration(
-                            color: const Color(0xFF0C0C18).withOpacity(0.85),
+                            color: const Color(0xFF0C0C18).withValues(alpha: 0.85),
                             borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: accentColor.withOpacity(0.3), width: 1.5),
+                            border: Border.all(color: accentColor.withValues(alpha: 0.3), width: 1.5),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.5),
+                                color: Colors.black.withValues(alpha: 0.5),
                                 blurRadius: 20,
                                 offset: const Offset(0, 10),
                               ),
@@ -314,9 +309,9 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                                   Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: accentColor.withOpacity(0.15),
+                                      color: accentColor.withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(12),
-                                      border: Border.all(color: accentColor.withOpacity(0.5)),
+                                      border: Border.all(color: accentColor.withValues(alpha: 0.5)),
                                     ),
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
@@ -329,10 +324,10 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                                               height: 6,
                                               decoration: BoxDecoration(
                                                 shape: BoxShape.circle,
-                                                color: accentColor.withOpacity(_pulseAnimation.value),
+                                                color: accentColor.withValues(alpha: _pulseAnimation.value),
                                                 boxShadow: [
                                                   BoxShadow(
-                                                    color: accentColor.withOpacity(_pulseAnimation.value * 0.5),
+                                                    color: accentColor.withValues(alpha: _pulseAnimation.value * 0.5),
                                                     blurRadius: 4,
                                                   ),
                                                 ],
@@ -363,14 +358,16 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                                   _InfoStat(label: 'LONGITUDE', value: _formatLng(_issPosition!.longitude)),
                                 ],
                               ),
-                              const SizedBox(height: 20),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  _InfoStat(label: 'ALTITUDE', value: '${_issPosition!.altitude.toStringAsFixed(1)} km'),
-                                  _InfoStat(label: 'VELOCITY', value: '${_issPosition!.velocity.toStringAsFixed(0)} km/h'),
-                                ],
-                              ),
+                              if (_issPosition!.altitude > 0 && _issPosition!.velocity > 0) ...[
+                                const SizedBox(height: 20),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    _InfoStat(label: 'ALTITUDE', value: '${_issPosition!.altitude.toStringAsFixed(1)} km'),
+                                    _InfoStat(label: 'VELOCITY', value: '${_issPosition!.velocity.toStringAsFixed(0)} km/h'),
+                                  ],
+                                ),
+                              ],
                             ],
                           ),
                         ),
@@ -400,7 +397,7 @@ class _InfoStat extends StatelessWidget {
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withOpacity(0.5),
+            color: Colors.white.withValues(alpha: 0.5),
             fontSize: 11,
             fontWeight: FontWeight.w600,
             letterSpacing: 1.2,
