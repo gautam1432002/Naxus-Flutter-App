@@ -51,13 +51,17 @@ class AppDataStore {
     final Future<void> fetchIss = () async {
       try {
         issPosition = await issService.fetchIssPosition();
-      } catch (e) {}
+      } catch (e) {
+        // Silently ignore prefetch failures
+      }
     }();
 
     final Future<void> fetchWiki = () async {
       try {
         historyEvents = await wikiService.fetchOnThisDayEvents();
-      } catch (e) {}
+      } catch (e) {
+        // Silently ignore prefetch failures
+      }
     }();
 
     // 2. Fetch Location dependent data (AirPulse)
@@ -72,7 +76,9 @@ class AppDataStore {
           weather = results[0] as WeatherModel;
           airQuality = results[1] as AirQualityModel;
         }
-      } catch (e) {}
+      } catch (e) {
+        // Silently ignore prefetch failures
+      }
     }();
 
     await Future.wait([

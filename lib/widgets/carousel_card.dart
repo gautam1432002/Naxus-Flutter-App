@@ -10,6 +10,7 @@ class CardThemeInfo {
   final IconData previewIcon;
   final String previewText;
   final String actionHint;
+  final String heroTag;
   final VoidCallback onTap;
 
   const CardThemeInfo({
@@ -21,6 +22,7 @@ class CardThemeInfo {
     required this.previewIcon,
     required this.previewText,
     required this.actionHint,
+    required this.heroTag,
     required this.onTap,
   });
 }
@@ -221,19 +223,24 @@ class CarouselCard extends StatelessWidget {
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Row(
-                                  children: [
-                                    Icon(info.previewIcon, size: 12, color: Colors.white.withValues(alpha: 0.45)),
-                                    const SizedBox(width: 6),
-                                    Text(
-                                      info.previewText,
-                                      style: TextStyle(
-                                        color: Colors.white.withValues(alpha: 0.45),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      Icon(info.previewIcon, size: 12, color: Colors.white.withValues(alpha: 0.45)),
+                                      const SizedBox(width: 6),
+                                      Expanded(
+                                        child: Text(
+                                          info.previewText,
+                                          style: TextStyle(
+                                            color: Colors.white.withValues(alpha: 0.45),
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 5),

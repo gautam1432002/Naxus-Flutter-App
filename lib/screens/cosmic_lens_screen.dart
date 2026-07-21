@@ -1,8 +1,8 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../models/apod_model.dart';
 import '../services/nasa_service.dart';
 import '../services/connectivity_service.dart';
+import '../constants/hero_tags.dart';
 import '../theme/app_theme.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/error_state.dart';
@@ -155,12 +155,21 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
   Widget build(BuildContext context) {
     const Color accentColor = Color(0xFF8B5CF6);
 
-    return Container(
-      decoration: AppTheme.spaceBackground,
-      child: Scaffold(
-        backgroundColor: const Color(0xFF0A0A0C).withValues(alpha: 0.5),
-        body: Column(
-          children: [
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Hero(
+              tag: HeroTags.cosmicLens,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(decoration: AppTheme.spaceBackground),
+              ),
+            ),
+          ),
+          Column(
+            children: [
             // App Bar
             SafeArea(
               bottom: false,
@@ -266,6 +275,7 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
             ),
           ],
         ),
+        ],
       ),
     );
   }

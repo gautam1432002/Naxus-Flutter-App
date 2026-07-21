@@ -7,6 +7,8 @@ import 'echoes_screen.dart';
 import 'air_pulse_screen.dart';
 import 'orbit_watch_screen.dart';
 import '../services/app_data_store.dart';
+import '../widgets/card_flip_route.dart';
+import '../constants/hero_tags.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -34,15 +36,6 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  void _navigateToPlaceholder(String title) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => _PlaceholderScreen(title: title),
-      ),
-    );
-  }
-
   List<CardThemeInfo> get _cards => [
     CardThemeInfo(
       primaryColor: const Color(0xFF8B5CF6),
@@ -53,9 +46,10 @@ class _HomeScreenState extends State<HomeScreen> {
       previewIcon: Icons.star,
       previewText: 'Pillars of Creation',
       actionHint: 'NASA',
+      heroTag: HeroTags.cosmicLens,
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const CosmicLensScreen()),
+        CardFlipRoute(pageBuilder: (context) => const CosmicLensScreen(), heroTag: HeroTags.cosmicLens),
       ),
     ),
     CardThemeInfo(
@@ -67,9 +61,10 @@ class _HomeScreenState extends State<HomeScreen> {
       previewIcon: Icons.location_on,
       previewText: '45.2°N · 75.6°W',
       actionHint: 'Live Feed',
+      heroTag: HeroTags.orbitWatch,
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const OrbitWatchScreen()),
+        CardFlipRoute(pageBuilder: (context) => const OrbitWatchScreen(), heroTag: HeroTags.orbitWatch),
       ),
     ),
     CardThemeInfo(
@@ -81,9 +76,10 @@ class _HomeScreenState extends State<HomeScreen> {
       previewIcon: Icons.thermostat,
       previewText: '22°C · Good',
       actionHint: 'Real-time',
+      heroTag: HeroTags.airPulse,
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const AirPulseScreen()),
+        CardFlipRoute(pageBuilder: (context) => const AirPulseScreen(), heroTag: HeroTags.airPulse),
       ),
     ),
     CardThemeInfo(
@@ -95,9 +91,10 @@ class _HomeScreenState extends State<HomeScreen> {
       previewIcon: Icons.calendar_today,
       previewText: 'Jul 16',
       actionHint: 'Daily',
+      heroTag: HeroTags.echoes,
       onTap: () => Navigator.push(
         context,
-        MaterialPageRoute(builder: (context) => const EchoesScreen()),
+        CardFlipRoute(pageBuilder: (context) => const EchoesScreen(), heroTag: HeroTags.echoes),
       ),
     ),
   ];
@@ -181,9 +178,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
                               final Matrix4 transform = Matrix4.identity()
                                 ..setEntry(3, 2, 0.001) // perspective
-                                ..translate(translationX, 0.0, 0.0)
+                                ..translateByDouble(translationX, 0.0, 0.0, 1.0)
                                 ..rotateY(rotateY)
-                                ..scale(scale);
+                                ..scaleByDouble(scale, scale, scale, 1.0);
 
                               return Transform(
                                 transform: transform,
@@ -195,7 +192,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                     height: 500,
                                     // Ignore pointers on the visual layer so the top PageView catches gestures
                                     child: IgnorePointer(
-                                      child: CarouselCard(info: _cards[index]),
+                                      child: Hero(
+                                        tag: _cards[index].heroTag,
+                                        child: Material(
+                                          color: Colors.transparent,
+                                          child: CarouselCard(info: _cards[index]),
+                                        ),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -265,24 +268,3 @@ class StarfieldPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _PlaceholderScreen extends StatelessWidget {
-  final String title;
-  const _PlaceholderScreen({required this.title});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: AppTheme.spaceBackground,
-      child: Scaffold(
-        backgroundColor: Colors.transparent,
-        appBar: AppBar(title: Text(title)),
-        body: Center(
-          child: Text(
-            '$title Service',
-            style: Theme.of(context).textTheme.headlineMedium,
-          ),
-        ),
-      ),
-    );
-  }
-}
