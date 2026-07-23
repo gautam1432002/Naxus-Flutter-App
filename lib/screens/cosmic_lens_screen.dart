@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/apod_model.dart';
 import '../services/nasa_service.dart';
 import '../services/connectivity_service.dart';
-import '../constants/hero_tags.dart';
+
 import '../theme/app_theme.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/error_state.dart';
@@ -160,13 +160,7 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
       body: Stack(
         children: [
           Positioned.fill(
-            child: Hero(
-              tag: HeroTags.cosmicLens,
-              child: Material(
-                color: Colors.transparent,
-                child: Container(decoration: AppTheme.spaceBackground),
-              ),
-            ),
+            child: Container(decoration: AppTheme.spaceBackground),
           ),
           Column(
             children: [

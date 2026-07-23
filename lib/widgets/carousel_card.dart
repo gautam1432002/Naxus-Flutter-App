@@ -10,7 +10,6 @@ class CardThemeInfo {
   final IconData previewIcon;
   final String previewText;
   final String actionHint;
-  final String heroTag;
   final VoidCallback onTap;
 
   const CardThemeInfo({
@@ -22,7 +21,6 @@ class CardThemeInfo {
     required this.previewIcon,
     required this.previewText,
     required this.actionHint,
-    required this.heroTag,
     required this.onTap,
   });
 }

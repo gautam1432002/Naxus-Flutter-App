@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/history_event_model.dart';
 import '../services/wiki_service.dart';
 import '../services/connectivity_service.dart';
-import '../constants/hero_tags.dart';
+
 import '../widgets/skeleton_loader.dart';
 import '../widgets/error_state.dart';
 import '../widgets/frosted_back_button.dart';
@@ -88,12 +88,9 @@ class _EchoesScreenState extends State<EchoesScreen> {
       body: Stack(
         children: [
           const Positioned.fill(
-            child: Hero(
-              tag: HeroTags.echoes,
-              child: Material(
-                color: Color(0xFF0A0A12),
-                child: SizedBox.expand(),
-              ),
+            child: Material(
+              color: Color(0xFF0A0A12),
+              child: SizedBox.expand(),
             ),
           ),
           // States
@@ -191,17 +188,11 @@ class _EchoesScreenState extends State<EchoesScreen> {
                             letterSpacing: 1.2,
                           ),
                         ),
-                        Hero(
-                          tag: 'echoes_hero',
-                          child: Material(
-                            color: Colors.transparent,
-                            child: Text(
-                              'On This Day',
-                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
+                        Text(
+                          'On This Day',
+                          style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
                       ],

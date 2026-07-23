@@ -7,7 +7,7 @@ import '../models/iss_model.dart';
 import '../services/iss_service.dart';
 import '../services/connectivity_service.dart';
 import '../theme/app_theme.dart';
-import '../constants/hero_tags.dart';
+
 import '../widgets/skeleton_loader.dart';
 import '../widgets/error_state.dart';
 import '../widgets/frosted_back_button.dart';
@@ -161,13 +161,7 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
       body: Stack(
         children: [
           Positioned.fill(
-            child: Hero(
-              tag: HeroTags.orbitWatch,
-              child: Material(
-                color: Colors.transparent,
-                child: Container(decoration: AppTheme.spaceBackground),
-              ),
-            ),
+            child: Container(decoration: AppTheme.spaceBackground),
           ),
                 // Map or Loading/Error State
                 if (_isLoading)

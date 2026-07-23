@@ -13,7 +13,7 @@ import '../services/geocoding_service.dart';
 import '../services/location_storage_service.dart';
 import '../services/connectivity_service.dart';
 
-import '../constants/hero_tags.dart';
+
 import '../widgets/skeleton_loader.dart';
 import '../widgets/error_state.dart';
 import '../widgets/frosted_back_button.dart';
@@ -383,12 +383,9 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
       body: Stack(
         children: [
           const Positioned.fill(
-            child: Hero(
-              tag: HeroTags.airPulse,
-              child: Material(
-                color: Color(0xFF0A0A12),
-                child: SizedBox.expand(),
-              ),
+            child: Material(
+              color: Color(0xFF0A0A12),
+              child: SizedBox.expand(),
             ),
           ),
           Column(
