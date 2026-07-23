@@ -26,7 +26,7 @@ class AirPulseScreen extends StatefulWidget {
   State<AirPulseScreen> createState() => _AirPulseScreenState();
 }
 
-class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProviderStateMixin {
+class _AirPulseScreenState extends State<AirPulseScreen> {
   final AirQualityService _airQualityService = AirQualityService();
   final WeatherService _weatherService = WeatherService();
   final LocationStorageService _locationStorageService = LocationStorageService();
@@ -41,18 +41,9 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
   bool _isLoading = true;
   String? _error;
 
-  late AnimationController _animationController;
-  late Animation<double> _animation;
-
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1200),
-    );
-    _animation = CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic);
-    
     _initData();
   }
 
@@ -101,7 +92,6 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
           _airQuality = store.airQuality;
           _isLoading = false;
         });
-        _animationController.forward(from: 0.0);
       }
     } else {
       setState(() {
@@ -133,7 +123,6 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
           _airQuality = results[1] as AirQualityModel;
           _isLoading = false;
         });
-        _animationController.forward(from: 0.0);
       }
     } catch (e) {
       if (mounted) {
@@ -181,7 +170,6 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
 
   @override
   void dispose() {
-    _animationController.dispose();
     super.dispose();
   }
 
@@ -451,11 +439,8 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
                         final isSelected = _currentLocation != null && loc.name == _currentLocation!.name && loc.country == _currentLocation!.country;
                         return Padding(
                           padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
-                          child: ActionChip(
-                            backgroundColor: isSelected ? accentColor.withValues(alpha: 0.2) : Colors.white.withValues(alpha: 0.05),
-                            side: BorderSide(color: isSelected ? accentColor : Colors.white.withValues(alpha: 0.1)),
-                            label: Text(loc.name, style: TextStyle(color: isSelected ? accentColor : Colors.white70)),
-                            onPressed: () async {
+                          child: GestureDetector(
+                            onTap: () async {
                               await _locationStorageService.saveLastLocation(loc);
                               if (mounted) {
                                 setState(() {
@@ -464,6 +449,29 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
                                 _fetchData();
                               }
                             },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              curve: Curves.easeInOut,
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isSelected 
+                                    ? const Color(0xFF0F172A) 
+                                    : Colors.black.withValues(alpha: 0.04),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isSelected 
+                                      ? accentColor 
+                                      : Colors.white.withValues(alpha: 0.1),
+                                ),
+                              ),
+                              child: Text(
+                                loc.name, 
+                                style: TextStyle(
+                                  color: isSelected ? accentColor : Colors.white70,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                ),
+                              ),
+                            ),
                           ),
                         );
                       },
@@ -592,13 +600,13 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
                                       const SizedBox(height: 32),
 
                                       // AQI Gauge
-                                      AnimatedBuilder(
-                                        animation: _animation,
-                                        builder: (context, child) {
-                                          final aqi = _airQuality!.europeanAqi;
-                                          final normalizedValue = math.min(aqi / 100.0, 1.0);
-                                          final animatedValue = normalizedValue * _animation.value;
-                                          final activeColor = _getAqiColor(aqi);
+                                      TweenAnimationBuilder<double>(
+                                        tween: Tween<double>(begin: 0.0, end: _airQuality!.europeanAqi),
+                                        duration: const Duration(milliseconds: 1200),
+                                        curve: Curves.easeOutCubic,
+                                        builder: (context, aqiVal, child) {
+                                          final normalizedValue = math.min(aqiVal / 100.0, 1.0);
+                                          final activeColor = _getAqiColor(aqiVal);
 
                                           return SizedBox(
                                             width: 240,
@@ -609,7 +617,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
                                                 CustomPaint(
                                                   size: const Size(240, 240),
                                                   painter: AqiGaugePainter(
-                                                    value: animatedValue,
+                                                    value: normalizedValue,
                                                     activeColor: activeColor,
                                                   ),
                                                 ),
@@ -617,7 +625,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
                                                   mainAxisSize: MainAxisSize.min,
                                                   children: [
                                                     Text(
-                                                      (aqi * _animation.value).toInt().toString(),
+                                                      aqiVal.toInt().toString(),
                                                       style: TextStyle(
                                                         color: Colors.white,
                                                         fontSize: 56,
@@ -631,7 +639,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> with SingleTickerProvid
                                                       ),
                                                     ),
                                                     Text(
-                                                      _getAqiLabel(aqi),
+                                                      _getAqiLabel(aqiVal),
                                                       style: TextStyle(
                                                         color: activeColor,
                                                         fontSize: 16,

@@ -148,8 +148,8 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
     super.dispose();
   }
 
-  String _formatLat(double lat) => '${lat.abs().toStringAsFixed(2)}° ${lat >= 0 ? 'N' : 'S'}';
-  String _formatLng(double lng) => '${lng.abs().toStringAsFixed(2)}° ${lng >= 0 ? 'E' : 'W'}';
+  String _formatLat(double lat) => '${lat.abs().toStringAsFixed(4)}° ${lat >= 0 ? 'N' : 'S'}';
+  String _formatLng(double lng) => '${lng.abs().toStringAsFixed(4)}° ${lng >= 0 ? 'E' : 'W'}';
 
   @override
   Widget build(BuildContext context) {
@@ -356,8 +356,8 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                                   Row(
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      _InfoStat(label: 'LATITUDE', value: _formatLat(_issPosition!.latitude)),
-                                      _InfoStat(label: 'LONGITUDE', value: _formatLng(_issPosition!.longitude)),
+                                      _InfoStat(label: 'LATITUDE', value: _issPosition!.latitude, formatter: _formatLat),
+                                      _InfoStat(label: 'LONGITUDE', value: _issPosition!.longitude, formatter: _formatLng),
                                     ],
                                   ),
                                   if (_issPosition!.altitude > 0 && _issPosition!.velocity > 0) ...[
@@ -365,8 +365,8 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                                     Row(
                                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                       children: [
-                                        _InfoStat(label: 'ALTITUDE', value: '${_issPosition!.altitude.toStringAsFixed(1)} km'),
-                                        _InfoStat(label: 'VELOCITY', value: '${_issPosition!.velocity.toStringAsFixed(0)} km/h'),
+                                        _InfoStat(label: 'ALTITUDE', value: _issPosition!.altitude, formatter: (val) => '${val.toStringAsFixed(1)} km'),
+                                        _InfoStat(label: 'VELOCITY', value: _issPosition!.velocity, formatter: (val) => '${val.toStringAsFixed(0)} km/h'),
                                       ],
                                     ),
                                   ],
@@ -386,9 +386,10 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
 
 class _InfoStat extends StatelessWidget {
   final String label;
-  final String value;
+  final double value;
+  final String Function(double) formatter;
 
-  const _InfoStat({required this.label, required this.value});
+  const _InfoStat({required this.label, required this.value, required this.formatter});
 
   @override
   Widget build(BuildContext context) {
@@ -405,13 +406,20 @@ class _InfoStat extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          value,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 18,
-            fontWeight: FontWeight.w500,
-          ),
+        TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: value, end: value),
+          duration: const Duration(milliseconds: 750),
+          curve: Curves.easeOutCubic,
+          builder: (context, val, child) {
+            return Text(
+              formatter(val),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+            );
+          },
         ),
       ],
     );
