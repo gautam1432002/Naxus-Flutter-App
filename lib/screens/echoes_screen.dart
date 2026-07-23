@@ -8,6 +8,7 @@ import '../widgets/skeleton_loader.dart';
 import '../widgets/error_state.dart';
 import '../widgets/frosted_back_button.dart';
 import '../services/app_data_store.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 class EchoesScreen extends StatefulWidget {
   const EchoesScreen({super.key});
@@ -202,14 +203,21 @@ class _EchoesScreenState extends State<EchoesScreen> {
                 
                 // Timeline List
                 Expanded(
-                  child: ListView.builder(
-                    padding: const EdgeInsets.only(bottom: 32.0, top: 8.0),
-                    itemCount: _events!.length,
-                    itemBuilder: (context, index) {
-                      final event = _events![index];
-                      final bool isLast = index == _events!.length - 1;
+                  child: AnimationLimiter(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.only(bottom: 32.0, top: 8.0),
+                      itemCount: _events!.length,
+                      itemBuilder: (context, index) {
+                        final event = _events![index];
+                        final bool isLast = index == _events!.length - 1;
 
-                      return IntrinsicHeight(
+                        return AnimationConfiguration.staggeredList(
+                          position: index,
+                          duration: const Duration(milliseconds: 375),
+                          child: SlideAnimation(
+                            horizontalOffset: 50.0,
+                            child: FadeInAnimation(
+                              child: IntrinsicHeight(
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -307,8 +315,12 @@ class _EchoesScreenState extends State<EchoesScreen> {
                             ),
                           ],
                         ),
-                      );
-                    },
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
               ],

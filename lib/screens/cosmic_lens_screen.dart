@@ -10,6 +10,7 @@ import '../widgets/frosted_back_button.dart';
 import '../widgets/apod_hero_card.dart';
 import 'apod_detail_screen.dart';
 import '../services/app_data_store.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 class CosmicLensScreen extends StatefulWidget {
   const CosmicLensScreen({super.key});
@@ -102,7 +103,19 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
               if (apod.mediaType == 'video')
                 const Icon(Icons.play_circle_outline, color: Colors.white54, size: 48)
               else
-                Image.network(apod.url, fit: BoxFit.cover),
+                Hero(
+                  tag: 'apod_hero_${apod.date}',
+                  flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(24.0),
+                      child: toHeroContext.widget,
+                    );
+                  },
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16.0),
+                    child: Image.network(apod.url, fit: BoxFit.cover),
+                  ),
+                ),
               Positioned(
                 bottom: 0, left: 0, right: 0,
                 height: height * 0.7,
@@ -224,7 +237,7 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
                                 ApodHeroCard(
                                   apod: _todayApod!,
                                   isLive: true,
-                                  heroTag: 'today_hero',
+                                  heroTag: 'apod_hero_${_todayApod!.date}',
                                 ),
                               
                               const SizedBox(height: 32),
@@ -248,18 +261,30 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
                                 
                                 // Grid
                                 if (_previousApods.isNotEmpty)
-                                  _buildGridCard(_previousApods[0], 220),
-                                const SizedBox(height: 16),
-                                if (_previousApods.length > 1)
-                                  Row(
-                                    children: [
-                                      Expanded(child: _buildGridCard(_previousApods[1], 250)),
-                                      const SizedBox(width: 16),
-                                      if (_previousApods.length > 2)
-                                        Expanded(child: _buildGridCard(_previousApods[2], 250))
-                                      else
-                                        Expanded(child: Container()),
-                                    ],
+                                  AnimationLimiter(
+                                    child: GridView.builder(
+                                      shrinkWrap: true,
+                                      physics: const NeverScrollableScrollPhysics(),
+                                      itemCount: _previousApods.length,
+                                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: 2,
+                                        mainAxisSpacing: 16,
+                                        crossAxisSpacing: 16,
+                                        childAspectRatio: 0.8,
+                                      ),
+                                      itemBuilder: (context, index) {
+                                        return AnimationConfiguration.staggeredGrid(
+                                          position: index,
+                                          duration: const Duration(milliseconds: 400),
+                                          columnCount: 2,
+                                          child: ScaleAnimation(
+                                            child: FadeInAnimation(
+                                              child: _buildGridCard(_previousApods[index], 250),
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
                                   ),
                               ],
                               const SizedBox(height: 32),

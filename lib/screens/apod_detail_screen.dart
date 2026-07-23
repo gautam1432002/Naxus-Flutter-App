@@ -44,7 +44,7 @@ class ApodDetailScreen extends StatelessWidget {
                 child: ApodHeroCard(
                   apod: apod,
                   isLive: false,
-                  heroTag: 'archive_${apod.date}',
+                  heroTag: 'apod_hero_${apod.date}',
                 ),
               ),
             ),
