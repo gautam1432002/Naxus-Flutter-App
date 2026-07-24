@@ -104,8 +104,10 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             // Static Starfield Background
             Positioned.fill(
-              child: CustomPaint(
-                painter: StarfieldPainter(),
+              child: RepaintBoundary(
+                child: CustomPaint(
+                  painter: StarfieldPainter(),
+                ),
               ),
             ),
             
@@ -237,19 +239,20 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class StarfieldPainter extends CustomPainter {
+  final Paint _paint = Paint()..color = Colors.white.withValues(alpha: 0.3);
+
   @override
   void paint(Canvas canvas, Size size) {
     final random = Random(42); 
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.3);
 
     for (int i = 0; i < 150; i++) {
       final x = random.nextDouble() * size.width;
       final y = random.nextDouble() * size.height;
       final radius = random.nextDouble() * 1.5;
       
-      paint.color = Colors.white.withValues(alpha: random.nextDouble() * 0.4 + 0.1);
+      _paint.color = Colors.white.withValues(alpha: random.nextDouble() * 0.4 + 0.1);
       
-      canvas.drawCircle(Offset(x, y), radius, paint);
+      canvas.drawCircle(Offset(x, y), radius, _paint);
     }
   }
 

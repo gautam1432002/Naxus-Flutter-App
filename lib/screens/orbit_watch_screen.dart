@@ -32,6 +32,7 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
 
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+  AnimationController? _mapAnimationController;
 
   @override
   void initState() {
@@ -120,12 +121,13 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
     final zoomTween = Tween<double>(
         begin: _mapController.camera.zoom, end: destZoom);
 
-    final controller = AnimationController(
+    _mapAnimationController?.dispose();
+    _mapAnimationController = AnimationController(
         duration: const Duration(milliseconds: 1500), vsync: this);
     final Animation<double> animation =
-        CurvedAnimation(parent: controller, curve: Curves.fastOutSlowIn);
+        CurvedAnimation(parent: _mapAnimationController!, curve: Curves.fastOutSlowIn);
 
-    controller.addListener(() {
+    _mapAnimationController!.addListener(() {
       _mapController.move(
         LatLng(latTween.evaluate(animation), lngTween.evaluate(animation)),
         zoomTween.evaluate(animation),
@@ -134,17 +136,19 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
 
     animation.addStatusListener((status) {
       if (status == AnimationStatus.completed || status == AnimationStatus.dismissed) {
-        controller.dispose();
+        _mapAnimationController?.dispose();
+        _mapAnimationController = null;
       }
     });
 
-    controller.forward();
+    _mapAnimationController!.forward();
   }
 
   @override
   void dispose() {
     _pollingTimer?.cancel();
     _pulseController.dispose();
+    _mapAnimationController?.dispose();
     super.dispose();
   }
 
@@ -202,45 +206,47 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                             point: LatLng(_issPosition!.latitude, _issPosition!.longitude),
                             width: 60,
                             height: 60,
-                            child: AnimatedBuilder(
-                              animation: _pulseAnimation,
-                              builder: (context, child) {
-                                return Stack(
-                                  alignment: Alignment.center,
-                                  children: [
-                                    // Glowing background
-                                    Container(
-                                      width: 48 * _pulseAnimation.value,
-                                      height: 48 * _pulseAnimation.value,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: accentColor.withValues(alpha: 0.3 * (1.6 - _pulseAnimation.value)),
+                            child: RepaintBoundary(
+                              child: AnimatedBuilder(
+                                animation: _pulseAnimation,
+                                builder: (context, child) {
+                                  return Stack(
+                                    alignment: Alignment.center,
+                                    children: [
+                                      // Glowing background
+                                      Container(
+                                        width: 48 * _pulseAnimation.value,
+                                        height: 48 * _pulseAnimation.value,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: accentColor.withValues(alpha: 0.3 * (1.6 - _pulseAnimation.value)),
+                                        ),
                                       ),
-                                    ),
-                                    // Inner icon
-                                    Container(
-                                      width: 24,
-                                      height: 24,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color: nearBlack,
-                                        border: Border.all(color: accentColor, width: 2),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: accentColor.withValues(alpha: 0.6),
-                                            blurRadius: 8,
-                                          ),
-                                        ],
+                                      // Inner icon
+                                      Container(
+                                        width: 24,
+                                        height: 24,
+                                        decoration: BoxDecoration(
+                                          shape: BoxShape.circle,
+                                          color: nearBlack,
+                                          border: Border.all(color: accentColor, width: 2),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: accentColor.withValues(alpha: 0.6),
+                                              blurRadius: 8,
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.satellite_alt,
+                                          color: accentColor,
+                                          size: 14,
+                                        ),
                                       ),
-                                      child: const Icon(
-                                        Icons.satellite_alt,
-                                        color: accentColor,
-                                        size: 14,
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
+                                    ],
+                                  );
+                                },
+                              ),
                             ),
                           ),
                         ],

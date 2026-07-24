@@ -600,69 +600,71 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
                                       const SizedBox(height: 32),
 
                                       // AQI Gauge
-                                      TweenAnimationBuilder<double>(
-                                        tween: Tween<double>(begin: 0.0, end: _airQuality!.europeanAqi),
-                                        duration: const Duration(milliseconds: 1200),
-                                        curve: Curves.easeOutCubic,
-                                        builder: (context, aqiVal, child) {
-                                          final normalizedValue = math.min(aqiVal / 100.0, 1.0);
-                                          final activeColor = _getAqiColor(aqiVal);
+                                      RepaintBoundary(
+                                        child: TweenAnimationBuilder<double>(
+                                          tween: Tween<double>(begin: 0.0, end: _airQuality!.europeanAqi),
+                                          duration: const Duration(milliseconds: 1200),
+                                          curve: Curves.easeOutCubic,
+                                          builder: (context, aqiVal, child) {
+                                            final normalizedValue = math.min(aqiVal / 100.0, 1.0);
+                                            final activeColor = _getAqiColor(aqiVal);
 
-                                          return SizedBox(
-                                            width: 240,
-                                            height: 240,
-                                            child: Stack(
-                                              alignment: Alignment.center,
-                                              children: [
-                                                CustomPaint(
-                                                  size: const Size(240, 240),
-                                                  painter: AqiGaugePainter(
-                                                    value: normalizedValue,
-                                                    activeColor: activeColor,
+                                            return SizedBox(
+                                              width: 240,
+                                              height: 240,
+                                              child: Stack(
+                                                alignment: Alignment.center,
+                                                children: [
+                                                  CustomPaint(
+                                                    size: const Size(240, 240),
+                                                    painter: AqiGaugePainter(
+                                                      value: normalizedValue,
+                                                      activeColor: activeColor,
+                                                    ),
                                                   ),
-                                                ),
-                                                Column(
-                                                  mainAxisSize: MainAxisSize.min,
-                                                  children: [
-                                                    Text(
-                                                      aqiVal.toInt().toString(),
-                                                      style: TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 56,
-                                                        fontWeight: FontWeight.w800,
-                                                        shadows: [
-                                                          Shadow(
-                                                            color: activeColor.withValues(alpha: 0.5),
-                                                            blurRadius: 20,
-                                                          ),
-                                                        ],
+                                                  Column(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Text(
+                                                        aqiVal.toInt().toString(),
+                                                        style: TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 56,
+                                                          fontWeight: FontWeight.w800,
+                                                          shadows: [
+                                                            Shadow(
+                                                              color: activeColor.withValues(alpha: 0.5),
+                                                              blurRadius: 20,
+                                                            ),
+                                                          ],
+                                                        ),
                                                       ),
-                                                    ),
-                                                    Text(
-                                                      _getAqiLabel(aqiVal),
-                                                      style: TextStyle(
-                                                        color: activeColor,
-                                                        fontSize: 16,
-                                                        fontWeight: FontWeight.w600,
-                                                        letterSpacing: 1.2,
+                                                      Text(
+                                                        _getAqiLabel(aqiVal),
+                                                        style: TextStyle(
+                                                          color: activeColor,
+                                                          fontSize: 16,
+                                                          fontWeight: FontWeight.w600,
+                                                          letterSpacing: 1.2,
+                                                        ),
                                                       ),
-                                                    ),
-                                                    const SizedBox(height: 4),
-                                                    Text(
-                                                      'AQI',
-                                                      style: TextStyle(
-                                                        color: Colors.white.withValues(alpha: 0.4),
-                                                        fontSize: 12,
-                                                        fontWeight: FontWeight.w500,
-                                                        letterSpacing: 1.5,
+                                                      const SizedBox(height: 4),
+                                                      Text(
+                                                        'AQI',
+                                                        style: TextStyle(
+                                                          color: Colors.white.withValues(alpha: 0.4),
+                                                          fontSize: 12,
+                                                          fontWeight: FontWeight.w500,
+                                                          letterSpacing: 1.5,
+                                                        ),
                                                       ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        },
+                                                    ],
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          },
+                                        ),
                                       ),
                                       
                                       const SizedBox(height: 32),
@@ -800,6 +802,23 @@ class AqiGaugePainter extends CustomPainter {
   final double value;
   final Color activeColor;
 
+  final Paint _trackPaint = Paint()
+    ..color = Colors.white.withValues(alpha: 0.08)
+    ..strokeWidth = 14
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round;
+
+  final Paint _glowPaint = Paint()
+    ..strokeWidth = 28
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round
+    ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
+
+  final Paint _fgPaint = Paint()
+    ..strokeWidth = 14
+    ..style = PaintingStyle.stroke
+    ..strokeCap = StrokeCap.round;
+
   AqiGaugePainter({required this.value, required this.activeColor});
 
   @override
@@ -809,37 +828,16 @@ class AqiGaugePainter extends CustomPainter {
     const startAngle = 135 * (math.pi / 180);
     const sweepAngle = 270 * (math.pi / 180);
 
-    // Background track
-    final trackPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.08)
-      ..strokeWidth = 14
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    
-    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), startAngle, sweepAngle, false, trackPaint);
+    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), startAngle, sweepAngle, false, _trackPaint);
 
-    // Foreground track
     final activeSweep = sweepAngle * value;
     
     if (value > 0) {
-      // Glow
-      final glowPaint = Paint()
-        ..color = activeColor.withValues(alpha: 0.35)
-        ..strokeWidth = 28
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 16);
+      _glowPaint.color = activeColor.withValues(alpha: 0.35);
+      canvas.drawArc(Rect.fromCircle(center: center, radius: radius), startAngle, activeSweep, false, _glowPaint);
 
-      canvas.drawArc(Rect.fromCircle(center: center, radius: radius), startAngle, activeSweep, false, glowPaint);
-
-      // Actual foreground
-      final fgPaint = Paint()
-        ..color = activeColor
-        ..strokeWidth = 14
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round;
-
-      canvas.drawArc(Rect.fromCircle(center: center, radius: radius), startAngle, activeSweep, false, fgPaint);
+      _fgPaint.color = activeColor;
+      canvas.drawArc(Rect.fromCircle(center: center, radius: radius), startAngle, activeSweep, false, _fgPaint);
     }
   }
 
