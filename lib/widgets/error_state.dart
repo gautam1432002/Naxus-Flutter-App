@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'tactile_glass_button.dart';
 
 class ErrorState extends StatefulWidget {
   final Color accentColor;
@@ -40,8 +41,6 @@ class _ErrorStateState extends State<ErrorState> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    const Color nearBlack = Color(0xFF0A0A12);
-    
     return Center(
       child: FadeTransition(
         opacity: _fadeAnimation,
@@ -63,16 +62,12 @@ class _ErrorStateState extends State<ErrorState> with SingleTickerProviderStateM
                 ),
               ),
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
+              TactileGlassButton(
+                icon: Icons.refresh,
+                onTap: () {
                   HapticFeedback.mediumImpact();
                   widget.onRetry();
                 },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: widget.accentColor,
-                  foregroundColor: nearBlack,
-                ),
-                child: const Text('Retry'),
               ),
             ],
           ),
