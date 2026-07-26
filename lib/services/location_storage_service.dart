@@ -49,4 +49,12 @@ class LocationStorageService {
     }
     return [];
   }
+
+  Future<void> removeSavedLocation(LocationModel location) async {
+    final prefs = await SharedPreferences.getInstance();
+    final locations = await getSavedLocations();
+    locations.removeWhere((loc) => loc.name == location.name && loc.country == location.country);
+    final jsonList = locations.map((loc) => loc.toJson()).toList();
+    await prefs.setString(_savedLocationsKey, jsonEncode(jsonList));
+  }
 }
