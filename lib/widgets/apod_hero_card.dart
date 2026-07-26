@@ -1,9 +1,6 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../models/apod_model.dart';
-import 'fullscreen_image_viewer.dart';
-
-class ApodHeroCard extends StatelessWidget {
+import '../models/apod_model.dart';class ApodHeroCard extends StatelessWidget {
   final ApodModel apod;
   final bool isLive;
   final String heroTag;
@@ -85,14 +82,25 @@ class ApodHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        height: 480,
-        decoration: const BoxDecoration(
-          color: Color(0xFF1A1A24),
-        ),
-        child: Stack(
+    return Container(
+      height: 480,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B).withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.2),
+            blurRadius: 24,
+            offset: const Offset(0, 8),
+          )
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(26.5),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Stack(
           children: [
             // Image / Video Content
             if (apod.mediaType == 'video')
@@ -108,20 +116,28 @@ class ApodHeroCard extends StatelessWidget {
               )
             else
               Positioned.fill(
-                child: GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).push(MaterialPageRoute(
-                      builder: (_) => FullscreenImageViewer(
-                        imageUrl: apod.url,
-                        heroTag: heroTag,
-                      ),
-                    ));
+                child: Hero(
+                  tag: heroTag,
+                  flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(24.0),
+                      child: toHeroContext.widget,
+                    );
                   },
-                  child: Hero(
-                    tag: heroTag,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24.0),
                     child: Image.network(
                       apod.url,
                       fit: BoxFit.cover,
+                      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                        if (wasSynchronouslyLoaded) return child;
+                        return AnimatedOpacity(
+                          opacity: frame == null ? 0 : 1,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          child: child,
+                        );
+                      },
                     ),
                   ),
                 ),
@@ -237,6 +253,7 @@ class ApodHeroCard extends StatelessWidget {
             ),
           ],
         ),
+      ),
       ),
     );
   }

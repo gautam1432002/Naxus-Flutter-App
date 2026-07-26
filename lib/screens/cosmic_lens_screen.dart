@@ -92,11 +92,22 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
           builder: (_) => ApodDetailScreen(apod: apod),
         ));
       },
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          height: height,
-          color: const Color(0xFF1A1A24),
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E293B).withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.0),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 24,
+              offset: const Offset(0, 8),
+            )
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -113,7 +124,19 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
                   },
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(16.0),
-                    child: Image.network(apod.url, fit: BoxFit.cover),
+                    child: Image.network(
+                      apod.url,
+                      fit: BoxFit.cover,
+                      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                        if (wasSynchronouslyLoaded) return child;
+                        return AnimatedOpacity(
+                          opacity: frame == null ? 0 : 1,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          child: child,
+                        );
+                      },
+                    ),
                   ),
                 ),
               Positioned(
@@ -278,6 +301,8 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
                                           duration: const Duration(milliseconds: 400),
                                           columnCount: 2,
                                           child: ScaleAnimation(
+                                            scale: 0.9,
+                                            curve: Curves.easeOutCubic,
                                             child: FadeInAnimation(
                                               child: _buildGridCard(_previousApods[index], 250),
                                             ),

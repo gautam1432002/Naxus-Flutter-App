@@ -1,16 +1,16 @@
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/iss_model.dart';
 import '../services/iss_service.dart';
 import '../services/connectivity_service.dart';
-import '../theme/app_theme.dart';
 
 import '../widgets/skeleton_loader.dart';
 import '../widgets/error_state.dart';
-import '../widgets/frosted_back_button.dart';
+import '../widgets/tactile_glass_button.dart';
 import '../services/app_data_store.dart';
 
 class OrbitWatchScreen extends StatefulWidget {
@@ -144,6 +144,10 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
     _mapAnimationController!.forward();
   }
 
+  void _loadDataAndCenterMap() {
+    _initFetch();
+  }
+
   @override
   void dispose() {
     _pollingTimer?.cancel();
@@ -155,279 +159,338 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
   String _formatLat(double lat) => '${lat.abs().toStringAsFixed(4)}° ${lat >= 0 ? 'N' : 'S'}';
   String _formatLng(double lng) => '${lng.abs().toStringAsFixed(4)}° ${lng >= 0 ? 'E' : 'W'}';
 
-  @override
-  Widget build(BuildContext context) {
-    const Color accentColor = Color(0xFFFBBF24); // Amber
-    const Color nearBlack = Color(0xFF0A0A12);
-
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Container(decoration: AppTheme.spaceBackground),
+  Widget _buildBentoCell(String label, IconData icon, double value, String Function(double) formatter) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        color: Colors.white.withValues(alpha: 0.75),
+        border: Border.all(color: Colors.white, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
-                // Map or Loading/Error State
-                if (_isLoading)
-                  const Center(child: SkeletonLoader(width: 240, height: 240, shape: BoxShape.circle))
-                else if (_error != null)
-                  ErrorState(
-                    accentColor: accentColor,
-                    message: _error!,
-                    onRetry: () {
-                      setState(() {
-                        _isLoading = true;
-                        _error = null;
-                      });
-                      _initFetch();
-                    },
-                  )
-                else if (_issPosition != null)
-                  FlutterMap(
-                    mapController: _mapController,
-                    options: MapOptions(
-                      initialCenter: LatLng(_issPosition!.latitude, _issPosition!.longitude),
-                      initialZoom: 3.5,
-                      minZoom: 2,
-                      maxZoom: 10,
-                      interactionOptions: const InteractionOptions(
-                        flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(icon, size: 14, color: const Color(0xFF06B6D4)),
+                    const SizedBox(width: 6),
+                    Text(
+                      label,
+                      style: const TextStyle(
+                        color: Color(0xFF64748B),
+                        fontWeight: FontWeight.w800,
+                        fontSize: 11,
+                        letterSpacing: 0.8,
                       ),
                     ),
-                    children: [
-                      TileLayer(
-                        urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
-                        subdomains: const ['a', 'b', 'c', 'd'],
-                        userAgentPackageName: 'com.example.nexus',
+                  ],
+                ),
+                const SizedBox(height: 12),
+                TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: value, end: value),
+                  duration: const Duration(milliseconds: 750),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, val, child) {
+                    return Text(
+                      formatter(val),
+                      style: const TextStyle(
+                        color: Color(0xFF0F172A),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
                       ),
-                      MarkerLayer(
-                        markers: [
-                          Marker(
-                            point: LatLng(_issPosition!.latitude, _issPosition!.longitude),
-                            width: 60,
-                            height: 60,
-                            child: RepaintBoundary(
-                              child: AnimatedBuilder(
-                                animation: _pulseAnimation,
-                                builder: (context, child) {
-                                  return Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      // Glowing background
-                                      Container(
-                                        width: 48 * _pulseAnimation.value,
-                                        height: 48 * _pulseAnimation.value,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: accentColor.withValues(alpha: 0.3 * (1.6 - _pulseAnimation.value)),
-                                        ),
-                                      ),
-                                      // Inner icon
-                                      Container(
-                                        width: 24,
-                                        height: 24,
-                                        decoration: BoxDecoration(
-                                          shape: BoxShape.circle,
-                                          color: nearBlack,
-                                          border: Border.all(color: accentColor, width: 2),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: accentColor.withValues(alpha: 0.6),
-                                              blurRadius: 8,
-                                            ),
-                                          ],
-                                        ),
-                                        child: const Icon(
-                                          Icons.satellite_alt,
-                                          color: accentColor,
-                                          size: 14,
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                },
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMap() {
+    return FlutterMap(
+      mapController: _mapController,
+      options: MapOptions(
+        initialCenter: LatLng(_issPosition!.latitude, _issPosition!.longitude),
+        initialZoom: 3.5,
+        minZoom: 2,
+        maxZoom: 10,
+        interactionOptions: const InteractionOptions(
+          flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+        ),
+      ),
+      children: [
+        TileLayer(
+          urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+          subdomains: const ['a', 'b', 'c', 'd'],
+          userAgentPackageName: 'com.example.nexus',
+        ),
+        MarkerLayer(
+          markers: [
+            Marker(
+              point: LatLng(_issPosition!.latitude, _issPosition!.longitude),
+              width: 60,
+              height: 60,
+              child: RepaintBoundary(
+                child: AnimatedBuilder(
+                  animation: _pulseAnimation,
+                  builder: (context, child) {
+                    return Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Glowing background
+                        Container(
+                          width: 48 * _pulseAnimation.value,
+                          height: 48 * _pulseAnimation.value,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: const Color(0xFF06B6D4).withValues(alpha: 0.3 * (1.6 - _pulseAnimation.value)),
+                          ),
+                        ),
+                        // Inner icon
+                        Container(
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.white,
+                            border: Border.all(color: const Color(0xFF06B6D4), width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF06B6D4).withValues(alpha: 0.6),
+                                blurRadius: 8,
                               ),
-                            ),
+                            ],
                           ),
-                        ],
+                          child: const Icon(
+                            Icons.satellite_alt,
+                            color: Color(0xFF06B6D4),
+                            size: 14,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
+        const RichAttributionWidget(
+          attributions: [
+            TextSourceAttribution(
+              '© OpenStreetMap, © CARTO',
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: Stack(
+        children: [
+          // Atmospheric lighting (Top Left)
+          Positioned(
+            top: -100,
+            left: -100,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF06B6D4).withValues(alpha: 0.12),
+                boxShadow: [
+                  BoxShadow(color: const Color(0xFF06B6D4).withValues(alpha: 0.12), blurRadius: 100, spreadRadius: 50)
+                ]
+              ),
+            ),
+          ),
+          // Atmospheric lighting (Bottom Right)
+          Positioned(
+            bottom: -100,
+            right: -100,
+            child: Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: const Color(0xFF0E7490).withValues(alpha: 0.12),
+                boxShadow: [
+                  BoxShadow(color: const Color(0xFF0E7490).withValues(alpha: 0.12), blurRadius: 100, spreadRadius: 50)
+                ]
+              ),
+            ),
+          ),
+          
+          SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Floating Navigation Row
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      TactileGlassButton(
+                        icon: Icons.arrow_back_ios_new,
+                        onTap: () => Navigator.of(context).pop(),
                       ),
-                      const RichAttributionWidget(
-                        attributions: [
-                          TextSourceAttribution(
-                            '© OpenStreetMap contributors, © CARTO',
-                          ),
-                        ],
+                      TactileGlassButton(
+                        icon: Icons.my_location,
+                        onTap: () {
+                          HapticFeedback.lightImpact();
+                          _loadDataAndCenterMap();
+                        },
                       ),
                     ],
                   ),
-
-                // Back button
-                SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 16.0, top: 16.0),
-                    child: const FrostedBackButton(heroTag: 'orbit_watch_hero'),
-                  ),
                 ),
-
-                // Info Card
-                if (_issPosition != null)
-                  Align(
-                    alignment: Alignment.bottomCenter,
-                    child: SafeArea(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24.0),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                            child: Container(
-                              padding: const EdgeInsets.all(24),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0C0C18).withValues(alpha: 0.85),
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(color: accentColor.withValues(alpha: 0.3), width: 1.5),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.5),
-                                    blurRadius: 20,
-                                    offset: const Offset(0, 10),
-                                  ),
-                                ],
-                              ),
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          const Icon(Icons.satellite_alt, color: accentColor, size: 24),
-                                          const SizedBox(width: 12),
-                                          Text(
-                                            'ISS Tracker',
-                                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      // Live badge
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                        decoration: BoxDecoration(
-                                          color: accentColor.withValues(alpha: 0.15),
-                                          borderRadius: BorderRadius.circular(12),
-                                          border: Border.all(color: accentColor.withValues(alpha: 0.5)),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            AnimatedBuilder(
-                                              animation: _pulseAnimation,
-                                              builder: (context, child) {
-                                                return Container(
-                                                  width: 6,
-                                                  height: 6,
-                                                  decoration: BoxDecoration(
-                                                    shape: BoxShape.circle,
-                                                    color: accentColor.withValues(alpha: _pulseAnimation.value),
-                                                    boxShadow: [
-                                                      BoxShadow(
-                                                        color: accentColor.withValues(alpha: _pulseAnimation.value * 0.5),
-                                                        blurRadius: 4,
-                                                      ),
-                                                    ],
-                                                  ),
-                                                );
-                                              }
-                                            ),
-                                            const SizedBox(width: 6),
-                                            const Text(
-                                              'Live',
-                                              style: TextStyle(
-                                                color: accentColor,
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w600,
-                                                letterSpacing: 0.5,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 24),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    children: [
-                                      _InfoStat(label: 'LATITUDE', value: _issPosition!.latitude, formatter: _formatLat),
-                                      _InfoStat(label: 'LONGITUDE', value: _issPosition!.longitude, formatter: _formatLng),
-                                    ],
-                                  ),
-                                  if (_issPosition!.altitude > 0 && _issPosition!.velocity > 0) ...[
-                                    const SizedBox(height: 20),
-                                    Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        _InfoStat(label: 'ALTITUDE', value: _issPosition!.altitude, formatter: (val) => '${val.toStringAsFixed(1)} km'),
-                                        _InfoStat(label: 'VELOCITY', value: _issPosition!.velocity, formatter: (val) => '${val.toStringAsFixed(0)} km/h'),
-                                      ],
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ),
+                
+                // Header Title & Status Pill
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text(
+                        'Orbit Watch',
+                        style: TextStyle(
+                          color: Color(0xFF0F172A),
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: -1,
                         ),
                       ),
+                      // Live badge
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF06B6D4).withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: const Color(0xFF06B6D4).withValues(alpha: 0.5)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AnimatedBuilder(
+                              animation: _pulseAnimation,
+                              builder: (context, child) {
+                                return Container(
+                                  width: 6,
+                                  height: 6,
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: const Color(0xFF06B6D4).withValues(alpha: _pulseAnimation.value),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF06B6D4).withValues(alpha: _pulseAnimation.value * 0.5),
+                                        blurRadius: 4,
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+                            ),
+                            const SizedBox(width: 6),
+                            const Text(
+                              'ISS LIVE RELAY',
+                              style: TextStyle(
+                                color: Color(0xFF06B6D4),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // 3D Glass Map Viewport
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(36),
+                        border: Border.all(color: const Color(0xFF06B6D4).withValues(alpha: 0.4), width: 1.5),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFF06B6D4).withValues(alpha: 0.15),
+                            blurRadius: 30,
+                            offset: const Offset(0, 15),
+                          ),
+                        ],
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(36),
+                        child: _isLoading 
+                            ? const SkeletonLoader(width: double.infinity, height: double.infinity)
+                            : _error != null 
+                                ? ErrorState(
+                                    accentColor: const Color(0xFF06B6D4),
+                                    message: _error!,
+                                    onRetry: _initFetch,
+                                  )
+                                : _buildMap(),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                
+                // Bento Telemetry Deck
+                if (_issPosition != null)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                    child: Column(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(child: _buildBentoCell('LATITUDE', Icons.explore, _issPosition!.latitude, _formatLat)),
+                            const SizedBox(width: 16),
+                            Expanded(child: _buildBentoCell('LONGITUDE', Icons.public, _issPosition!.longitude, _formatLng)),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(child: _buildBentoCell('ALTITUDE', Icons.height, _issPosition!.altitude, (val) => '${val.toStringAsFixed(1)} km')),
+                            const SizedBox(width: 16),
+                            Expanded(child: _buildBentoCell('VELOCITY', Icons.speed, _issPosition!.velocity, (val) => '${val.toStringAsFixed(0)} km/h')),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
               ],
             ),
-    );
-  }
-}
-
-class _InfoStat extends StatelessWidget {
-  final String label;
-  final double value;
-  final String Function(double) formatter;
-
-  const _InfoStat({required this.label, required this.value, required this.formatter});
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.5),
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 1.2,
           ),
-        ),
-        const SizedBox(height: 4),
-        TweenAnimationBuilder<double>(
-          tween: Tween<double>(begin: value, end: value),
-          duration: const Duration(milliseconds: 750),
-          curve: Curves.easeOutCubic,
-          builder: (context, val, child) {
-            return Text(
-              formatter(val),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.w500,
-              ),
-            );
-          },
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
