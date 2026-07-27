@@ -74,7 +74,11 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
       if (mounted) {
         setState(() {
           _todayApod = results[0] as ApodModel;
-          _previousApods = results[1] as List<ApodModel>;
+          
+          // Filter out today's APOD in case of timezone overlap
+          final allPrevious = results[1] as List<ApodModel>;
+          _previousApods = allPrevious.where((a) => a.date != _todayApod!.date).toList();
+          
           _isLoading = false;
         });
       }
@@ -90,8 +94,8 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
 
   Widget _buildGridCard(ApodModel apod, double height) {
     return OpenContainer(
-      transitionType: ContainerTransitionType.fadeThrough,
-      transitionDuration: const Duration(milliseconds: 800),
+      transitionType: ContainerTransitionType.fade,
+      transitionDuration: const Duration(milliseconds: 600),
       openBuilder: (context, _) => ApodDetailScreen(apod: apod),
       closedElevation: 0,
       closedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -223,10 +227,9 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: const Color(0xFF8B5CF6).withValues(alpha: 0.15),
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                child: Container(color: Colors.transparent),
+                boxShadow: [
+                  BoxShadow(color: const Color(0xFF8B5CF6).withValues(alpha: 0.15), blurRadius: 100, spreadRadius: 50)
+                ]
               ),
             ),
           ),
@@ -239,10 +242,9 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: const Color(0xFF3B82F6).withValues(alpha: 0.15),
-              ),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 80, sigmaY: 80),
-                child: Container(color: Colors.transparent),
+                boxShadow: [
+                  BoxShadow(color: const Color(0xFF3B82F6).withValues(alpha: 0.15), blurRadius: 100, spreadRadius: 50)
+                ]
               ),
             ),
           ),

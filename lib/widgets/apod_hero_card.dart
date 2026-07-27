@@ -36,7 +36,7 @@ class ApodHeroCard extends StatelessWidget {
                 filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0A0E27).withValues(alpha: 0.6),
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.55),
                     border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.15), width: 1)),
                   ),
                   child: ListView(
@@ -62,7 +62,7 @@ class ApodHeroCard extends StatelessWidget {
                           border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                         ),
                         child: Text(
-                          apod.date,
+                          apod.formattedDate,
                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.2),
                         ),
                       ),
@@ -127,8 +127,8 @@ class ApodHeroCard extends StatelessWidget {
               Positioned.fill(
                 child: OpenContainer(
                   tappable: false,
-                  transitionType: ContainerTransitionType.fadeThrough,
-                  transitionDuration: const Duration(milliseconds: 800),
+                  transitionType: ContainerTransitionType.fade,
+                  transitionDuration: const Duration(milliseconds: 600),
                   openColor: Colors.transparent,
                   closedColor: Colors.transparent,
                   closedElevation: 0,

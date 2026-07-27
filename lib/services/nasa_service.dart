@@ -29,7 +29,7 @@ class NasaService {
 
     final today = DateTime.now();
     final endDate = today.subtract(const Duration(days: 1));
-    final startDate = today.subtract(const Duration(days: 3));
+    final startDate = today.subtract(const Duration(days: 6));
 
     String format(DateTime dt) => '${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}';
 
