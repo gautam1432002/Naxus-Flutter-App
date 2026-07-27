@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 
 class WeatherIllustration extends StatefulWidget {
@@ -81,86 +82,162 @@ class _WeatherPainter extends CustomPainter {
   }
 
   void _drawSun(Canvas canvas, Offset center, double radius) {
-    final paint = Paint()
-      ..shader = const RadialGradient(
-        colors: [Color(0xFFFDE047), Color(0xFFF59E0B)],
-      ).createShader(Rect.fromCircle(center: center, radius: radius))
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15);
+    // Outer glow
+    final glowPaint = Paint()
+      ..shader = ui.Gradient.radial(center, radius * 2, [
+        const Color(0xFFFDE047).withValues(alpha: 0.5),
+        const Color(0xFFFDE047).withValues(alpha: 0.0),
+      ])
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
+      
+    canvas.drawCircle(center, radius * 1.5, glowPaint);
 
-    // Pulsing and rotating sun
-    final pulse = math.sin(time * math.pi * 4) * 2;
+    // Inner sun body (Gradient)
+    final sunPaint = Paint()
+      ..shader = ui.Gradient.linear(
+        Offset(center.dx, center.dy - radius),
+        Offset(center.dx, center.dy + radius),
+        [
+          const Color(0xFFFEF08A),
+          const Color(0xFFF59E0B),
+        ],
+      );
+
+    // Inner shadow effect
+    final shadowPaint = Paint()
+      ..shader = ui.Gradient.radial(
+        Offset(center.dx - radius * 0.3, center.dy - radius * 0.3),
+        radius,
+        [
+          Colors.white.withValues(alpha: 0.8),
+          Colors.transparent,
+        ],
+      )
+      ..blendMode = BlendMode.overlay;
+
+    final pulse = math.sin(time * math.pi * 4) * 1.5;
+    final r = radius + pulse;
+
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate(time * math.pi * 2);
-    canvas.drawCircle(Offset.zero, radius + pulse, paint);
+
+    canvas.drawCircle(Offset.zero, r, sunPaint);
+    canvas.drawCircle(Offset.zero, r, shadowPaint);
     
     // Sun rays
     final rayPaint = Paint()
-      ..color = const Color(0xFFFDE047).withValues(alpha: 0.6)
-      ..strokeWidth = 4
+      ..shader = ui.Gradient.linear(
+        Offset.zero,
+        Offset(0, r + 20),
+        [
+          const Color(0xFFFDE047).withValues(alpha: 0.8),
+          const Color(0xFFF59E0B).withValues(alpha: 0.0),
+        ],
+      )
+      ..strokeWidth = 6
       ..strokeCap = StrokeCap.round;
     
     for (int i = 0; i < 8; i++) {
       final angle = (i * math.pi / 4);
-      final p1 = Offset(math.cos(angle) * (radius + 5), math.sin(angle) * (radius + 5));
-      final p2 = Offset(math.cos(angle) * (radius + 15), math.sin(angle) * (radius + 15));
-      canvas.drawLine(p1, p2, rayPaint);
+      canvas.save();
+      canvas.rotate(angle);
+      canvas.drawLine(Offset(0, r + 8), Offset(0, r + 22), rayPaint);
+      canvas.restore();
     }
     canvas.restore();
   }
 
-  void _drawCloud(Canvas canvas, Offset center, double width, Color color) {
-    final paint = Paint()
-      ..color = color
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
-    
-    final shadowPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.1)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20);
+  void _drawCloud(Canvas canvas, Offset center, double width, Color baseColor) {
+    // We use a dark base shadow
+    final dropShadow = Paint()
+      ..color = Colors.black.withValues(alpha: 0.15)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15);
+      
+    // Cloud body gradient
+    final cloudPaint = Paint()
+      ..shader = ui.Gradient.linear(
+        Offset(center.dx, center.dy - width * 0.4),
+        Offset(center.dx, center.dy + width * 0.2),
+        [
+          Colors.white,
+          baseColor,
+        ],
+      );
 
-    final floatOffset = math.sin(time * math.pi * 2) * 5;
+    // Subtle top highlight for 3D rim lighting
+    final highlightPaint = Paint()
+      ..shader = ui.Gradient.linear(
+        Offset(center.dx, center.dy - width * 0.5),
+        Offset(center.dx, center.dy),
+        [
+          Colors.white.withValues(alpha: 0.9),
+          Colors.white.withValues(alpha: 0.0),
+        ],
+      );
+
+    final floatOffset = math.sin(time * math.pi * 2) * 6;
     final cloudCenter = Offset(center.dx, center.dy + floatOffset);
 
     // Base cloud shapes
-    final r1 = width * 0.25;
-    final r2 = width * 0.35;
-    final r3 = width * 0.2;
+    final r1 = width * 0.28;
+    final r2 = width * 0.4;
+    final r3 = width * 0.22;
     
-    canvas.drawCircle(Offset(cloudCenter.dx - width * 0.2, cloudCenter.dy), r1, shadowPaint);
-    canvas.drawCircle(cloudCenter, r2, shadowPaint);
-    canvas.drawCircle(Offset(cloudCenter.dx + width * 0.25, cloudCenter.dy + 10), r3, shadowPaint);
+    // Draw Drop Shadows
+    canvas.drawCircle(Offset(cloudCenter.dx - width * 0.25, cloudCenter.dy + 5), r1, dropShadow);
+    canvas.drawCircle(cloudCenter, r2, dropShadow);
+    canvas.drawCircle(Offset(cloudCenter.dx + width * 0.3, cloudCenter.dy + 15), r3, dropShadow);
 
-    canvas.drawCircle(Offset(cloudCenter.dx - width * 0.2, cloudCenter.dy), r1, paint);
-    canvas.drawCircle(cloudCenter, r2, paint);
-    canvas.drawCircle(Offset(cloudCenter.dx + width * 0.25, cloudCenter.dy + 10), r3, paint);
+    // Draw Main Body
+    canvas.drawCircle(Offset(cloudCenter.dx - width * 0.25, cloudCenter.dy + 5), r1, cloudPaint);
+    canvas.drawCircle(cloudCenter, r2, cloudPaint);
+    canvas.drawCircle(Offset(cloudCenter.dx + width * 0.3, cloudCenter.dy + 15), r3, cloudPaint);
+
+    // Draw Highlights
+    canvas.drawCircle(Offset(cloudCenter.dx - width * 0.25, cloudCenter.dy + 5), r1, highlightPaint);
+    canvas.drawCircle(cloudCenter, r2, highlightPaint);
+    canvas.drawCircle(Offset(cloudCenter.dx + width * 0.3, cloudCenter.dy + 15), r3, highlightPaint);
   }
 
   void _drawRain(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = const Color(0xFF60A5FA).withValues(alpha: 0.8)
-      ..strokeWidth = 3
+      ..shader = ui.Gradient.linear(
+        const Offset(0, 0),
+        const Offset(0, 20),
+        [
+          const Color(0xFF93C5FD).withValues(alpha: 0.9),
+          const Color(0xFF3B82F6).withValues(alpha: 0.2),
+        ],
+      )
+      ..strokeWidth = 4
       ..strokeCap = StrokeCap.round;
 
     for (int i = 0; i < 5; i++) {
       double t = (time + (i * 0.2)) % 1.0;
-      double x = size.width * 0.2 + (i * size.width * 0.15);
-      double y = size.height * 0.5 + (t * size.height * 0.5);
+      double x = size.width * 0.3 + (i * size.width * 0.15);
+      double y = size.height * 0.5 + (t * size.height * 0.6);
       
-      canvas.drawLine(Offset(x, y), Offset(x - 5, y + 10), paint);
+      canvas.save();
+      canvas.translate(x, y);
+      canvas.rotate(0.2); // slight angle
+      canvas.drawLine(const Offset(0, 0), const Offset(0, 15), paint);
+      canvas.restore();
     }
   }
 
   void _drawSnow(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.9)
-      ..style = PaintingStyle.fill;
+      ..color = Colors.white
+      ..style = PaintingStyle.fill
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
 
     for (int i = 0; i < 6; i++) {
       double t = (time + (i * 0.15)) % 1.0;
-      double x = size.width * 0.2 + (i * size.width * 0.12) + math.sin(t * math.pi * 4) * 10;
+      double x = size.width * 0.25 + (i * size.width * 0.15) + math.sin(t * math.pi * 4) * 8;
       double y = size.height * 0.5 + (t * size.height * 0.5);
       
-      canvas.drawCircle(Offset(x, y), 3, paint);
+      canvas.drawCircle(Offset(x, y), 4, paint);
     }
   }
 

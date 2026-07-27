@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'dart:ui';
+import 'dart:ui' as ui;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -12,6 +13,7 @@ import '../widgets/skeleton_loader.dart';
 import '../widgets/error_state.dart';
 import '../widgets/tactile_glass_button.dart';
 import '../services/app_data_store.dart';
+import 'fullscreen_map_screen.dart';
 
 class OrbitWatchScreen extends StatefulWidget {
   const OrbitWatchScreen({super.key});
@@ -79,7 +81,7 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
         });
         
         // Start periodic polling after successful first fetch
-        _pollingTimer = Timer.periodic(const Duration(seconds: 5), (_) => _pollPosition());
+        _pollingTimer = Timer.periodic(const Duration(seconds: 10), (_) => _pollPosition());
       }
     } catch (e) {
       if (mounted) {
@@ -163,20 +165,20 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(24),
-        color: Colors.white.withValues(alpha: 0.75),
-        border: Border.all(color: Colors.white, width: 1.5),
+        color: Colors.white.withValues(alpha: 0.05),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1.0),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -188,8 +190,8 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                     const SizedBox(width: 6),
                     Text(
                       label,
-                      style: const TextStyle(
-                        color: Color(0xFF64748B),
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
                         fontWeight: FontWeight.w800,
                         fontSize: 11,
                         letterSpacing: 0.8,
@@ -206,7 +208,7 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                     return Text(
                       formatter(val),
                       style: const TextStyle(
-                        color: Color(0xFF0F172A),
+                        color: Colors.white,
                         fontSize: 18,
                         fontWeight: FontWeight.w800,
                       ),
@@ -304,41 +306,10 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFF040B16), // Fallback
       body: Stack(
         children: [
-          // Atmospheric lighting (Top Left)
-          Positioned(
-            top: -100,
-            left: -100,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF06B6D4).withValues(alpha: 0.12),
-                boxShadow: [
-                  BoxShadow(color: const Color(0xFF06B6D4).withValues(alpha: 0.12), blurRadius: 100, spreadRadius: 50)
-                ]
-              ),
-            ),
-          ),
-          // Atmospheric lighting (Bottom Right)
-          Positioned(
-            bottom: -100,
-            right: -100,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: const Color(0xFF0E7490).withValues(alpha: 0.12),
-                boxShadow: [
-                  BoxShadow(color: const Color(0xFF0E7490).withValues(alpha: 0.12), blurRadius: 100, spreadRadius: 50)
-                ]
-              ),
-            ),
-          ),
+          const Positioned.fill(child: SpaceEnvironmentBackground()),
           
           SafeArea(
             child: Column(
@@ -375,7 +346,7 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                       const Text(
                         'Orbit Watch',
                         style: TextStyle(
-                          color: Color(0xFF0F172A),
+                          color: Colors.white,
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
                           letterSpacing: -1,
@@ -433,29 +404,53 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(36),
-                        border: Border.all(color: const Color(0xFF06B6D4).withValues(alpha: 0.4), width: 1.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF06B6D4).withValues(alpha: 0.15),
-                            blurRadius: 30,
-                            offset: const Offset(0, 15),
+                    child: GestureDetector(
+                      onLongPress: () {
+                        if (_issPosition != null) {
+                          HapticFeedback.mediumImpact();
+                          Navigator.push(
+                            context,
+                            PageRouteBuilder(
+                              transitionDuration: const Duration(milliseconds: 600),
+                              reverseTransitionDuration: const Duration(milliseconds: 600),
+                              pageBuilder: (context, animation, secondaryAnimation) {
+                                return FullscreenMapScreen(issPosition: _issPosition!);
+                              },
+                            ),
+                          );
+                        }
+                      },
+                      child: Hero(
+                        tag: 'orbit_map',
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(36),
+                            color: Colors.white.withValues(alpha: 0.05),
+                            border: Border.all(color: const Color(0xFF06B6D4).withValues(alpha: 0.3), width: 1.5),
+                            boxShadow: [
+                              BoxShadow(
+                                color: const Color(0xFF06B6D4).withValues(alpha: 0.15),
+                                blurRadius: 30,
+                                offset: const Offset(0, 15),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(36),
-                        child: _isLoading 
-                            ? const SkeletonLoader(width: double.infinity, height: double.infinity)
-                            : _error != null 
-                                ? ErrorState(
-                                    accentColor: const Color(0xFF06B6D4),
-                                    message: _error!,
-                                    onRetry: _initFetch,
-                                  )
-                                : _buildMap(),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(36),
+                            child: BackdropFilter(
+                              filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                              child: _isLoading 
+                                  ? const SkeletonLoader(width: double.infinity, height: double.infinity)
+                                  : _error != null 
+                                      ? ErrorState(
+                                          accentColor: const Color(0xFF06B6D4),
+                                          message: _error!,
+                                          onRetry: _initFetch,
+                                        )
+                                      : _buildMap(),
+                            ),
+                          ),
+                        ),
                       ),
                     ),
                   ),
@@ -493,4 +488,233 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
       ),
     );
   }
+}
+
+class SpaceEnvironmentBackground extends StatefulWidget {
+  const SpaceEnvironmentBackground({super.key});
+
+  @override
+  State<SpaceEnvironmentBackground> createState() => _SpaceEnvironmentBackgroundState();
+}
+
+class _SpaceEnvironmentBackgroundState extends State<SpaceEnvironmentBackground> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late final TextPainter _planetPainter;
+  late final TextPainter _satellitePainter;
+  late final TextPainter _rocketPainter;
+  late final TextPainter _cometPainter;
+  late final TextPainter _antennaPainter;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 40))..repeat();
+    
+    // Cache TextPainters for performance
+    _planetPainter = _createEmojiPainter('🪐', 100);
+    _satellitePainter = _createEmojiPainter('🛰️', 32);
+    _rocketPainter = _createEmojiPainter('🚀', 36);
+    _cometPainter = _createEmojiPainter('☄️', 30);
+    _antennaPainter = _createEmojiPainter('📡', 60);
+  }
+
+  TextPainter _createEmojiPainter(String emoji, double size) {
+    final painter = TextPainter(
+      text: TextSpan(text: emoji, style: TextStyle(fontSize: size)),
+      textDirection: TextDirection.ltr,
+    );
+    painter.layout();
+    return painter;
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return CustomPaint(
+          painter: _SpacePainter(
+            time: _controller.value,
+            planetPainter: _planetPainter,
+            satellitePainter: _satellitePainter,
+            rocketPainter: _rocketPainter,
+            cometPainter: _cometPainter,
+            antennaPainter: _antennaPainter,
+          ),
+          size: Size.infinite,
+        );
+      }
+    );
+  }
+}
+
+class _SpacePainter extends CustomPainter {
+  final double time;
+  final TextPainter planetPainter;
+  final TextPainter satellitePainter;
+  final TextPainter rocketPainter;
+  final TextPainter cometPainter;
+  final TextPainter antennaPainter;
+
+  _SpacePainter({
+    required this.time,
+    required this.planetPainter,
+    required this.satellitePainter,
+    required this.rocketPainter,
+    required this.cometPainter,
+    required this.antennaPainter,
+  });
+
+  void _drawCachedEmoji(Canvas canvas, TextPainter painter, Offset center, [double opacity = 1.0]) {
+    if (opacity < 1.0) {
+      canvas.saveLayer(
+        Rect.fromCenter(center: center, width: painter.width, height: painter.height),
+        Paint()..color = Colors.white.withValues(alpha: opacity),
+      );
+      painter.paint(canvas, center - Offset(painter.width / 2, painter.height / 2));
+      canvas.restore();
+    } else {
+      painter.paint(canvas, center - Offset(painter.width / 2, painter.height / 2));
+    }
+  }
+
+  void _drawSparkle(Canvas canvas, Offset center, double size, double opacity) {
+    final paint = Paint()..color = Colors.white.withValues(alpha: opacity);
+    final path = ui.Path();
+    path.moveTo(center.dx, center.dy - size);
+    path.quadraticBezierTo(center.dx, center.dy, center.dx + size, center.dy);
+    path.quadraticBezierTo(center.dx, center.dy, center.dx, center.dy + size);
+    path.quadraticBezierTo(center.dx, center.dy, center.dx - size, center.dy);
+    path.quadraticBezierTo(center.dx, center.dy, center.dx, center.dy - size);
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Deep cosmic background
+    final bgPaint = Paint()
+      ..shader = ui.Gradient.linear(
+        Offset.zero,
+        Offset(0, size.height),
+        [
+          const Color(0xFF040B16),
+          const Color(0xFF0B1426),
+          const Color(0xFF150B24),
+        ],
+        [0.0, 0.5, 1.0],
+      );
+    canvas.drawRect(Offset.zero & size, bgPaint);
+
+    // Nebula Accents
+    final nebula1 = Paint()
+      ..color = const Color(0xFF06B6D4).withValues(alpha: 0.15)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 100);
+    canvas.drawCircle(Offset(size.width * 0.2, size.height * 0.2), 200, nebula1);
+
+    final nebula2 = Paint()
+      ..color = const Color(0xFF8B5CF6).withValues(alpha: 0.12)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 120);
+    canvas.drawCircle(Offset(size.width * 0.8, size.height * 0.8), 250, nebula2);
+
+    // Planet 🪐
+    _drawCachedEmoji(canvas, planetPainter, Offset(size.width * 0.85, size.height * 0.15), 0.6);
+
+    // Custom Sparkle Stars
+    final random = math.Random(42);
+    for (int i = 0; i < 20; i++) {
+      final x = random.nextDouble() * size.width;
+      final y = random.nextDouble() * size.height;
+      final maxOpacity = random.nextDouble() * 0.8 + 0.2;
+      final phase = random.nextDouble() * 2 * math.pi;
+      
+      final currentOpacity = maxOpacity * (0.5 + 0.5 * math.sin(time * math.pi * 10 + phase));
+      _drawSparkle(canvas, Offset(x, y), random.nextDouble() * 6 + 4, currentOpacity);
+    }
+    
+    // Normal small dots for background fill
+    final starPaint = Paint()..color = Colors.white;
+    for (int i = 0; i < 80; i++) {
+      final x = random.nextDouble() * size.width;
+      final y = random.nextDouble() * size.height;
+      final currentOpacity = 0.5 * (0.5 + 0.5 * math.sin(time * math.pi * 10 + random.nextDouble() * 2 * math.pi));
+      starPaint.color = Colors.white.withValues(alpha: currentOpacity);
+      canvas.drawCircle(Offset(x, y), random.nextDouble() * 1.5, starPaint);
+    }
+
+    // Space Antenna 📡
+    final antennaPos = Offset(size.width * 0.15, size.height * 0.8);
+    _drawCachedEmoji(canvas, antennaPainter, antennaPos, 0.9);
+    
+    // Signals 📶 (Drawn dynamically as it changes)
+    final signalPhase = (time * 15) % 1.0;
+    if (signalPhase > 0.5) {
+      final signalPainter = TextPainter(
+        text: TextSpan(text: '📶', style: TextStyle(fontSize: 24, color: Colors.white.withValues(alpha: 0.8))),
+        textDirection: TextDirection.ltr,
+      )..layout();
+      final signalPos = Offset(antennaPos.dx + 30, antennaPos.dy - 30);
+      signalPainter.paint(canvas, signalPos - Offset(signalPainter.width / 2, signalPainter.height / 2));
+    }
+
+    // Rocket 🚀 (Moves diagonally)
+    final rocketProgress = (time * 1.5) % 1.0;
+    final rocketX = size.width * -0.2 + (size.width * 1.4 * rocketProgress);
+    final rocketY = size.height * 1.2 - (size.height * 1.4 * rocketProgress);
+    canvas.save();
+    canvas.translate(rocketX, rocketY);
+    _drawCachedEmoji(canvas, rocketPainter, Offset.zero);
+    canvas.restore();
+
+    // Nebula particles / Shooting Star ☄️
+    final cometProgress = (time * 3.0 + 0.5) % 1.0;
+    final cometX = size.width * 1.2 - (size.width * 1.4 * cometProgress);
+    final cometY = size.height * -0.2 + (size.height * 1.4 * cometProgress);
+    canvas.save();
+    canvas.translate(cometX, cometY);
+    canvas.rotate(math.pi); // Pointing down-left
+    _drawCachedEmoji(canvas, cometPainter, Offset.zero);
+    canvas.restore();
+
+    // Orbital Paths
+    final orbitPaint = Paint()
+      ..color = const Color(0xFF06B6D4).withValues(alpha: 0.2)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    
+    final center = Offset(size.width / 2, size.height * 0.4);
+    canvas.drawCircle(center, 160, orbitPaint);
+    canvas.drawCircle(center, 240, orbitPaint);
+
+    // Satellites 🛰️
+    final angle1 = time * 2 * math.pi;
+    final sat1X = center.dx + 160 * math.cos(angle1);
+    final sat1Y = center.dy + 160 * math.sin(angle1);
+    
+    canvas.save();
+    canvas.translate(sat1X, sat1Y);
+    canvas.rotate(angle1 + math.pi / 2);
+    _drawCachedEmoji(canvas, satellitePainter, Offset.zero);
+    canvas.restore();
+    
+    final angle2 = -time * 2 * math.pi * 0.6 + math.pi;
+    final sat2X = center.dx + 240 * math.cos(angle2);
+    final sat2Y = center.dy + 240 * math.sin(angle2);
+    
+    canvas.save();
+    canvas.translate(sat2X, sat2Y);
+    canvas.rotate(angle2 + math.pi / 2);
+    // Draw smaller satellite by scaling
+    canvas.scale(0.75);
+    _drawCachedEmoji(canvas, satellitePainter, Offset.zero);
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(covariant _SpacePainter oldDelegate) => time != oldDelegate.time;
 }
