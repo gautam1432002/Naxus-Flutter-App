@@ -1,6 +1,11 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import '../models/apod_model.dart';class ApodHeroCard extends StatelessWidget {
+import '../models/apod_model.dart';
+import 'fullscreen_image_viewer.dart';
+import 'apod_video_player.dart';
+import 'package:animations/animations.dart';
+
+class ApodHeroCard extends StatelessWidget {
   final ApodModel apod;
   final bool isLive;
   final String heroTag;
@@ -19,56 +24,69 @@ import '../models/apod_model.dart';class ApodHeroCard extends StatelessWidget {
       backgroundColor: Colors.transparent,
       builder: (context) {
         return DraggableScrollableSheet(
-          initialChildSize: 0.5,
+          initialChildSize: 0.6,
           minChildSize: 0.5,
           maxChildSize: 0.95,
           snap: true,
-          snapSizes: const [0.5, 0.95],
+          snapSizes: const [0.6, 0.95],
           builder: (context, scrollController) {
             return ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+                filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
                 child: Container(
-                  color: const Color(0xFF0A0A0C).withValues(alpha: 0.7),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0A0E27).withValues(alpha: 0.6),
+                    border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.15), width: 1)),
+                  ),
                   child: ListView(
                     controller: scrollController,
-                    padding: const EdgeInsets.all(24),
+                    padding: const EdgeInsets.all(28),
                     children: [
                       Center(
                         child: Container(
-                          width: 40,
-                          height: 4,
+                          width: 48,
+                          height: 5,
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.3),
-                            borderRadius: BorderRadius.circular(2),
+                            color: Colors.white.withValues(alpha: 0.4),
+                            borderRadius: BorderRadius.circular(2.5),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 24),
-                      Text(
-                        apod.date,
-                        style: const TextStyle(color: Color(0xFF8B5CF6), fontWeight: FontWeight.bold),
+                      const SizedBox(height: 32),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                        ),
+                        child: Text(
+                          apod.date,
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+                        ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 24),
                       Text(
                         apod.title,
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                          height: 1.2,
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          height: 1.15,
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 32),
                       Text(
                         apod.explanation,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.85),
-                          fontSize: 16,
-                          height: 1.6,
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 17,
+                          height: 1.7,
+                          letterSpacing: 0.3,
                         ),
                       ),
+                      const SizedBox(height: 48),
                     ],
                   ),
                 ),
@@ -104,40 +122,47 @@ import '../models/apod_model.dart';class ApodHeroCard extends StatelessWidget {
           children: [
             // Image / Video Content
             if (apod.mediaType == 'video')
-              const Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.play_circle_outline, color: Color(0xFF8B5CF6), size: 64),
-                    SizedBox(height: 16),
-                    Text('Video Content', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-              )
+              Positioned.fill(child: ApodVideoPlayer(videoUrl: apod.url))
             else
               Positioned.fill(
-                child: Hero(
-                  tag: heroTag,
-                  flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
-                    return ClipRRect(
-                      borderRadius: BorderRadius.circular(24.0),
-                      child: toHeroContext.widget,
-                    );
-                  },
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24.0),
-                    child: Image.network(
-                      apod.url,
-                      fit: BoxFit.cover,
-                      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                        if (wasSynchronouslyLoaded) return child;
-                        return AnimatedOpacity(
-                          opacity: frame == null ? 0 : 1,
-                          duration: const Duration(milliseconds: 300),
-                          curve: Curves.easeInOut,
-                          child: child,
+                child: OpenContainer(
+                  tappable: false,
+                  transitionType: ContainerTransitionType.fadeThrough,
+                  transitionDuration: const Duration(milliseconds: 800),
+                  openColor: Colors.transparent,
+                  closedColor: Colors.transparent,
+                  closedElevation: 0,
+                  openElevation: 0,
+                  openBuilder: (context, _) => FullscreenImageViewer(
+                    imageUrl: apod.url,
+                    heroTag: heroTag,
+                  ),
+                  closedBuilder: (context, openContainer) => GestureDetector(
+                    onLongPress: openContainer,
+                    child: Hero(
+                      tag: heroTag,
+                      flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(24.0),
+                          child: toHeroContext.widget,
                         );
                       },
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(24.0),
+                        child: Image.network(
+                          apod.url,
+                          fit: BoxFit.cover,
+                          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                            if (wasSynchronouslyLoaded) return child;
+                            return AnimatedOpacity(
+                              opacity: frame == null ? 0 : 1,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                              child: child,
+                            );
+                          },
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -149,12 +174,14 @@ import '../models/apod_model.dart';class ApodHeroCard extends StatelessWidget {
               left: 0,
               right: 0,
               height: 250,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, const Color(0xFF0A0A0C).withValues(alpha: 0.95)],
+              child: IgnorePointer(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, const Color(0xFF0A0A0C).withValues(alpha: 0.95)],
+                    ),
                   ),
                 ),
               ),

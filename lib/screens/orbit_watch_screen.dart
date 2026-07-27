@@ -28,6 +28,7 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
   final MapController _mapController = MapController();
   
   IssModel? _issPosition;
+  double _issHeading = 90.0; // Default to East
   bool _isLoading = true;
   String? _error;
   Timer? _pollingTimer;
@@ -36,17 +37,26 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
   late Animation<double> _pulseAnimation;
   AnimationController? _mapAnimationController;
 
+  bool _isReconnecting = false;
+
+  double _calculateBearing(double lat1, double lon1, double lat2, double lon2) {
+    final dLon = (lon2 - lon1) * math.pi / 180.0;
+    final l1 = lat1 * math.pi / 180.0;
+    final l2 = lat2 * math.pi / 180.0;
+    final y = math.sin(dLon) * math.cos(l2);
+    final x = math.cos(l1) * math.sin(l2) - math.sin(l1) * math.cos(l2) * math.cos(dLon);
+    return (math.atan2(y, x) * 180.0 / math.pi + 360.0) % 360.0;
+  }
+  
   @override
   void initState() {
     super.initState();
     _pulseController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 1),
+      duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
-    
-    _pulseAnimation = Tween<double>(begin: 0.6, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
-    );
+
+    _pulseAnimation = CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut);
 
     _initFetch();
   }
@@ -73,9 +83,15 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
     }
 
     try {
-      final pos = await _issService.fetchIssPosition();
-      if (mounted) {
+      final positions = await _issService.fetchInitialPositions();
+      if (mounted && positions.isNotEmpty) {
+        final pos = positions.last;
+        final pastPos = positions.first;
+        
         setState(() {
+          if (positions.length > 1) {
+            _issHeading = _calculateBearing(pastPos.latitude, pastPos.longitude, pos.latitude, pos.longitude);
+          }
           _issPosition = pos;
           _isLoading = false;
         });
@@ -95,20 +111,32 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
 
   Future<void> _pollPosition() async {
     final hasConnection = await _connectivityService.hasInternetConnection();
-    if (!hasConnection) return;
+    if (!hasConnection) {
+      if (mounted && !_isReconnecting) {
+        setState(() => _isReconnecting = true);
+      }
+      return;
+    }
 
     try {
       final pos = await _issService.fetchIssPosition();
       if (mounted) {
         setState(() {
+          if (_issPosition != null) {
+            _issHeading = _calculateBearing(_issPosition!.latitude, _issPosition!.longitude, pos.latitude, pos.longitude);
+          }
           _issPosition = pos;
+          _isReconnecting = false;
         });
         
         // Smoothly recenter map
         _animatedMapMove(LatLng(pos.latitude, pos.longitude), _mapController.camera.zoom);
       }
     } catch (e) {
-      // Silently skip if a periodic refresh fails
+      // Gracefully degrade: keep last known position but show reconnecting state
+      if (mounted && !_isReconnecting) {
+        setState(() => _isReconnecting = true);
+      }
       debugPrint('Periodic fetch failed: $e');
     }
   }
@@ -243,53 +271,13 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
         ),
         MarkerLayer(
           markers: [
-            Marker(
-              point: LatLng(_issPosition!.latitude, _issPosition!.longitude),
-              width: 60,
-              height: 60,
-              child: RepaintBoundary(
-                child: AnimatedBuilder(
-                  animation: _pulseAnimation,
-                  builder: (context, child) {
-                    return Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        // Glowing background
-                        Container(
-                          width: 48 * _pulseAnimation.value,
-                          height: 48 * _pulseAnimation.value,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: const Color(0xFF06B6D4).withValues(alpha: 0.3 * (1.6 - _pulseAnimation.value)),
-                          ),
-                        ),
-                        // Inner icon
-                        Container(
-                          width: 24,
-                          height: 24,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white,
-                            border: Border.all(color: const Color(0xFF06B6D4), width: 2),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF06B6D4).withValues(alpha: 0.6),
-                                blurRadius: 8,
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.satellite_alt,
-                            color: Color(0xFF06B6D4),
-                            size: 14,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+            if (_issPosition != null)
+              Marker(
+                point: LatLng(_issPosition!.latitude, _issPosition!.longitude),
+                width: 60,
+                height: 60,
+                child: _MiniatureISSMarker(heading: _issHeading),
               ),
-            ),
           ],
         ),
         const RichAttributionWidget(
@@ -311,177 +299,199 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
         children: [
           const Positioned.fill(child: SpaceEnvironmentBackground()),
           
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Floating Navigation Row
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      TactileGlassButton(
-                        icon: Icons.arrow_back_ios_new,
-                        onTap: () => Navigator.of(context).pop(),
-                      ),
-                      TactileGlassButton(
-                        icon: Icons.my_location,
-                        onTap: () {
-                          HapticFeedback.lightImpact();
-                          _loadDataAndCenterMap();
-                        },
-                      ),
-                    ],
-                  ),
+          // Full Screen Scrollable Content
+          CustomScrollView(
+            slivers: [
+              SliverSafeArea(
+                bottom: false,
+                sliver: const SliverToBoxAdapter(
+                  child: SizedBox(height: 72), // Space for floating navigation row
                 ),
-                
-                // Header Title & Status Pill
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      const Text(
-                        'Orbit Watch',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: -1,
-                        ),
-                      ),
-                      // Live badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF06B6D4).withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: const Color(0xFF06B6D4).withValues(alpha: 0.5)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            AnimatedBuilder(
-                              animation: _pulseAnimation,
-                              builder: (context, child) {
-                                return Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: const Color(0xFF06B6D4).withValues(alpha: _pulseAnimation.value),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF06B6D4).withValues(alpha: _pulseAnimation.value * 0.5),
-                                        blurRadius: 4,
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              }
-                            ),
-                            const SizedBox(width: 6),
-                            const Text(
-                              'ISS LIVE RELAY',
-                              style: TextStyle(
-                                color: Color(0xFF06B6D4),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.8,
+              ),
+              
+              // Header Title & Status Pill
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                        sliver: SliverToBoxAdapter(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              const Text(
+                                'Orbit Watch',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: -1,
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-                
-                // 3D Glass Map Viewport
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                    child: GestureDetector(
-                      onLongPress: () {
-                        if (_issPosition != null) {
-                          HapticFeedback.mediumImpact();
-                          Navigator.push(
-                            context,
-                            PageRouteBuilder(
-                              transitionDuration: const Duration(milliseconds: 600),
-                              reverseTransitionDuration: const Duration(milliseconds: 600),
-                              pageBuilder: (context, animation, secondaryAnimation) {
-                                return FullscreenMapScreen(issPosition: _issPosition!);
-                              },
-                            ),
-                          );
-                        }
-                      },
-                      child: Hero(
-                        tag: 'orbit_map',
-                        child: Container(
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(36),
-                            color: Colors.white.withValues(alpha: 0.05),
-                            border: Border.all(color: const Color(0xFF06B6D4).withValues(alpha: 0.3), width: 1.5),
-                            boxShadow: [
-                              BoxShadow(
-                                color: const Color(0xFF06B6D4).withValues(alpha: 0.15),
-                                blurRadius: 30,
-                                offset: const Offset(0, 15),
+                              // Live badge
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF06B6D4).withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: const Color(0xFF06B6D4).withValues(alpha: 0.5)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    AnimatedBuilder(
+                                      animation: _pulseAnimation,
+                                      builder: (context, child) {
+                                        return Container(
+                                          width: 6,
+                                          height: 6,
+                                          decoration: BoxDecoration(
+                                            shape: BoxShape.circle,
+                                            color: const Color(0xFF06B6D4).withValues(alpha: _pulseAnimation.value),
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: const Color(0xFF06B6D4).withValues(alpha: _pulseAnimation.value * 0.5),
+                                                blurRadius: 4,
+                                              ),
+                                            ],
+                                          ),
+                                        );
+                                      }
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      _isReconnecting ? 'RECONNECTING...' : 'ISS LIVE RELAY',
+                                      style: TextStyle(
+                                        color: _isReconnecting ? const Color(0xFFF59E0B) : const Color(0xFF06B6D4),
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 0.8,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ],
                           ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(36),
-                            child: BackdropFilter(
-                              filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-                              child: _isLoading 
-                                  ? const SkeletonLoader(width: double.infinity, height: double.infinity)
-                                  : _error != null 
-                                      ? ErrorState(
-                                          accentColor: const Color(0xFF06B6D4),
-                                          message: _error!,
-                                          onRetry: _initFetch,
-                                        )
-                                      : _buildMap(),
+                        ),
+                      ),
+                      const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                      
+                      // Map Viewport (Hero)
+                      SliverToBoxAdapter(
+                        child: SizedBox(
+                          height: 400,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                            child: GestureDetector(
+                              onLongPress: () {
+                                if (_issPosition != null) {
+                                  HapticFeedback.mediumImpact();
+                                  Navigator.push(
+                                    context,
+                                    PageRouteBuilder(
+                                      transitionDuration: const Duration(milliseconds: 600),
+                                      reverseTransitionDuration: const Duration(milliseconds: 600),
+                                      pageBuilder: (context, animation, secondaryAnimation) {
+                                        return FullscreenMapScreen(issPosition: _issPosition!);
+                                      },
+                                    ),
+                                  );
+                                }
+                              },
+                              child: Hero(
+                                tag: 'orbit_map',
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(36),
+                                    color: Colors.white.withValues(alpha: 0.05),
+                                    border: Border.all(
+                                      color: (_isReconnecting ? const Color(0xFFF59E0B) : const Color(0xFF06B6D4)).withValues(alpha: 0.3), 
+                                      width: 1.5,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF06B6D4).withValues(alpha: 0.15),
+                                        blurRadius: 30,
+                                        offset: const Offset(0, 15),
+                                      ),
+                                    ],
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(36),
+                                    child: BackdropFilter(
+                                      filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                                      child: _isLoading 
+                                          ? const SkeletonLoader(width: double.infinity, height: double.infinity)
+                                          : _error != null && _issPosition == null
+                                              ? ErrorState(
+                                                  accentColor: const Color(0xFF06B6D4),
+                                                  message: _error!,
+                                                  onRetry: _initFetch,
+                                                )
+                                              : _buildMap(),
+                                    ),
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
+                      
+                      const SliverToBoxAdapter(child: SizedBox(height: 24)),
+                      
+                      // Telemetry Deck
+                      if (_issPosition != null)
+                        SliverPadding(
+                          padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+                          sliver: SliverList(
+                            delegate: SliverChildListDelegate([
+                              Row(
+                                children: [
+                                  Expanded(child: _buildBentoCell('LATITUDE', Icons.explore, _issPosition!.latitude, _formatLat)),
+                                  const SizedBox(width: 16),
+                                  Expanded(child: _buildBentoCell('LONGITUDE', Icons.public, _issPosition!.longitude, _formatLng)),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(child: _buildBentoCell('ALTITUDE', Icons.height, _issPosition!.altitude, (val) => '${val.toStringAsFixed(1)} km')),
+                                  const SizedBox(width: 16),
+                                  Expanded(child: _buildBentoCell('VELOCITY', Icons.speed, _issPosition!.velocity, (val) => '${val.toStringAsFixed(0)} km/h')),
+                                ],
+                              ),
+                            ]),
+                          ),
+                        ),
+                    ],
                   ),
+          
+          // Floating Navigation Row (Overlay)
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              bottom: false,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    TactileGlassButton(
+                      icon: Icons.arrow_back_ios_new,
+                      onTap: () => Navigator.of(context).pop(),
+                    ),
+                    TactileGlassButton(
+                      icon: Icons.my_location,
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        _loadDataAndCenterMap();
+                      },
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 24),
-                
-                // Bento Telemetry Deck
-                if (_issPosition != null)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-                    child: Column(
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(child: _buildBentoCell('LATITUDE', Icons.explore, _issPosition!.latitude, _formatLat)),
-                            const SizedBox(width: 16),
-                            Expanded(child: _buildBentoCell('LONGITUDE', Icons.public, _issPosition!.longitude, _formatLng)),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(child: _buildBentoCell('ALTITUDE', Icons.height, _issPosition!.altitude, (val) => '${val.toStringAsFixed(1)} km')),
-                            const SizedBox(width: 16),
-                            Expanded(child: _buildBentoCell('VELOCITY', Icons.speed, _issPosition!.velocity, (val) => '${val.toStringAsFixed(0)} km/h')),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
+              ),
             ),
           ),
         ],
@@ -499,32 +509,11 @@ class SpaceEnvironmentBackground extends StatefulWidget {
 
 class _SpaceEnvironmentBackgroundState extends State<SpaceEnvironmentBackground> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late final TextPainter _planetPainter;
-  late final TextPainter _satellitePainter;
-  late final TextPainter _rocketPainter;
-  late final TextPainter _cometPainter;
-  late final TextPainter _antennaPainter;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(vsync: this, duration: const Duration(seconds: 40))..repeat();
-    
-    // Cache TextPainters for performance
-    _planetPainter = _createEmojiPainter('🪐', 100);
-    _satellitePainter = _createEmojiPainter('🛰️', 32);
-    _rocketPainter = _createEmojiPainter('🚀', 36);
-    _cometPainter = _createEmojiPainter('☄️', 30);
-    _antennaPainter = _createEmojiPainter('📡', 60);
-  }
-
-  TextPainter _createEmojiPainter(String emoji, double size) {
-    final painter = TextPainter(
-      text: TextSpan(text: emoji, style: TextStyle(fontSize: size)),
-      textDirection: TextDirection.ltr,
-    );
-    painter.layout();
-    return painter;
   }
 
   @override
@@ -539,14 +528,7 @@ class _SpaceEnvironmentBackgroundState extends State<SpaceEnvironmentBackground>
       animation: _controller,
       builder: (context, child) {
         return CustomPaint(
-          painter: _SpacePainter(
-            time: _controller.value,
-            planetPainter: _planetPainter,
-            satellitePainter: _satellitePainter,
-            rocketPainter: _rocketPainter,
-            cometPainter: _cometPainter,
-            antennaPainter: _antennaPainter,
-          ),
+          painter: _SpacePainter(time: _controller.value),
           size: Size.infinite,
         );
       }
@@ -556,33 +538,8 @@ class _SpaceEnvironmentBackgroundState extends State<SpaceEnvironmentBackground>
 
 class _SpacePainter extends CustomPainter {
   final double time;
-  final TextPainter planetPainter;
-  final TextPainter satellitePainter;
-  final TextPainter rocketPainter;
-  final TextPainter cometPainter;
-  final TextPainter antennaPainter;
 
-  _SpacePainter({
-    required this.time,
-    required this.planetPainter,
-    required this.satellitePainter,
-    required this.rocketPainter,
-    required this.cometPainter,
-    required this.antennaPainter,
-  });
-
-  void _drawCachedEmoji(Canvas canvas, TextPainter painter, Offset center, [double opacity = 1.0]) {
-    if (opacity < 1.0) {
-      canvas.saveLayer(
-        Rect.fromCenter(center: center, width: painter.width, height: painter.height),
-        Paint()..color = Colors.white.withValues(alpha: opacity),
-      );
-      painter.paint(canvas, center - Offset(painter.width / 2, painter.height / 2));
-      canvas.restore();
-    } else {
-      painter.paint(canvas, center - Offset(painter.width / 2, painter.height / 2));
-    }
-  }
+  _SpacePainter({required this.time});
 
   void _drawSparkle(Canvas canvas, Offset center, double size, double opacity) {
     final paint = Paint()..color = Colors.white.withValues(alpha: opacity);
@@ -593,6 +550,118 @@ class _SpacePainter extends CustomPainter {
     path.quadraticBezierTo(center.dx, center.dy, center.dx - size, center.dy);
     path.quadraticBezierTo(center.dx, center.dy, center.dx, center.dy - size);
     canvas.drawPath(path, paint);
+  }
+
+  void _drawSatellite(Canvas canvas, Offset center, double rotation) {
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(rotation);
+    
+    final bodyPaint = Paint()..color = Colors.white.withValues(alpha: 0.8);
+    final panelPaint = Paint()..color = const Color(0xFF06B6D4).withValues(alpha: 0.6);
+    final linePaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    // Solar panels
+    canvas.drawRect(Rect.fromCenter(center: const Offset(-15, 0), width: 12, height: 8), panelPaint);
+    canvas.drawRect(Rect.fromCenter(center: const Offset(15, 0), width: 12, height: 8), panelPaint);
+    
+    // Truss/Connection
+    canvas.drawLine(const Offset(-15, 0), const Offset(15, 0), linePaint);
+    
+    // Main Body
+    canvas.drawRect(Rect.fromCenter(center: Offset.zero, width: 8, height: 12), bodyPaint);
+    
+    // Antenna dish
+    canvas.drawArc(
+      Rect.fromCenter(center: const Offset(0, 8), width: 10, height: 10),
+      0, math.pi, false, linePaint..strokeWidth = 1.5
+    );
+    canvas.restore();
+  }
+
+  void _drawRocket(Canvas canvas, Offset center, double rotation) {
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    canvas.rotate(rotation);
+
+    final bodyPaint = Paint()..color = Colors.white.withValues(alpha: 0.9);
+    final windowPaint = Paint()..color = const Color(0xFF06B6D4);
+    final flamePaint = Paint()
+      ..shader = ui.Gradient.radial(const Offset(0, 15), 10, [
+        const Color(0xFFF59E0B),
+        const Color(0xFFF59E0B).withValues(alpha: 0.0)
+      ]);
+
+    // Body
+    final path = ui.Path();
+    path.moveTo(0, -15); // Nose
+    path.lineTo(6, -5);
+    path.lineTo(6, 10);
+    path.lineTo(-6, 10);
+    path.lineTo(-6, -5);
+    path.close();
+    canvas.drawPath(path, bodyPaint);
+
+    // Fins
+    final finPath = ui.Path();
+    finPath.moveTo(6, 5);
+    finPath.lineTo(12, 12);
+    finPath.lineTo(6, 12);
+    finPath.close();
+    finPath.moveTo(-6, 5);
+    finPath.lineTo(-12, 12);
+    finPath.lineTo(-6, 12);
+    finPath.close();
+    canvas.drawPath(finPath, bodyPaint);
+
+    // Window
+    canvas.drawCircle(const Offset(0, -2), 2.5, windowPaint);
+
+    // Flame
+    canvas.drawCircle(const Offset(0, 15), 8 + 2 * math.sin(time * 50), flamePaint);
+
+    canvas.restore();
+  }
+
+  void _drawAntenna(Canvas canvas, Offset center) {
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+
+    final bodyPaint = Paint()..color = Colors.white.withValues(alpha: 0.7);
+    final linePaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.5)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    // Base
+    canvas.drawLine(const Offset(0, 0), const Offset(0, 15), linePaint);
+    canvas.drawLine(const Offset(-10, 15), const Offset(10, 15), linePaint);
+    
+    // Dish
+    final dishPath = ui.Path();
+    dishPath.moveTo(-15, -5);
+    dishPath.quadraticBezierTo(0, 10, 15, -5);
+    canvas.drawPath(dishPath, linePaint);
+
+    // Receiver
+    canvas.drawLine(const Offset(0, 0), const Offset(0, -10), linePaint..strokeWidth = 1.0);
+    canvas.drawCircle(const Offset(0, -10), 2, bodyPaint);
+
+    // Signals
+    final signalPhase = (time * 15) % 1.0;
+    if (signalPhase > 0.5) {
+      final signalPaint = Paint()
+        ..color = const Color(0xFF06B6D4).withValues(alpha: 0.6)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1.5;
+      canvas.drawArc(Rect.fromCenter(center: const Offset(0, -10), width: 16, height: 16), -math.pi * 0.75, math.pi * 0.5, false, signalPaint);
+      canvas.drawArc(Rect.fromCenter(center: const Offset(0, -10), width: 24, height: 24), -math.pi * 0.75, math.pi * 0.5, false, signalPaint);
+    }
+
+    canvas.restore();
   }
 
   @override
@@ -622,8 +691,25 @@ class _SpacePainter extends CustomPainter {
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 120);
     canvas.drawCircle(Offset(size.width * 0.8, size.height * 0.8), 250, nebula2);
 
-    // Planet 🪐
-    _drawCachedEmoji(canvas, planetPainter, Offset(size.width * 0.85, size.height * 0.15), 0.6);
+    // Planet
+    final planetPaint = Paint()
+      ..shader = ui.Gradient.radial(
+        Offset(size.width * 0.85, size.height * 0.15),
+        40,
+        [const Color(0xFF334155), const Color(0xFF0F172A)],
+      );
+    canvas.drawCircle(Offset(size.width * 0.85, size.height * 0.15), 40, planetPaint);
+    
+    // Planet Ring
+    final ringPaint = Paint()
+      ..color = const Color(0xFF94A3B8).withValues(alpha: 0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4.0;
+    canvas.save();
+    canvas.translate(size.width * 0.85, size.height * 0.15);
+    canvas.rotate(math.pi * 0.2);
+    canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: 120, height: 30), ringPaint);
+    canvas.restore();
 
     // Custom Sparkle Stars
     final random = math.Random(42);
@@ -647,43 +733,32 @@ class _SpacePainter extends CustomPainter {
       canvas.drawCircle(Offset(x, y), random.nextDouble() * 1.5, starPaint);
     }
 
-    // Space Antenna 📡
-    final antennaPos = Offset(size.width * 0.15, size.height * 0.8);
-    _drawCachedEmoji(canvas, antennaPainter, antennaPos, 0.9);
-    
-    // Signals 📶 (Drawn dynamically as it changes)
-    final signalPhase = (time * 15) % 1.0;
-    if (signalPhase > 0.5) {
-      final signalPainter = TextPainter(
-        text: TextSpan(text: '📶', style: TextStyle(fontSize: 24, color: Colors.white.withValues(alpha: 0.8))),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      final signalPos = Offset(antennaPos.dx + 30, antennaPos.dy - 30);
-      signalPainter.paint(canvas, signalPos - Offset(signalPainter.width / 2, signalPainter.height / 2));
-    }
+    // Space Antenna
+    _drawAntenna(canvas, Offset(size.width * 0.15, size.height * 0.8));
 
-    // Rocket 🚀 (Moves diagonally)
+    // Rocket (Moves diagonally)
     final rocketProgress = (time * 1.5) % 1.0;
     final rocketX = size.width * -0.2 + (size.width * 1.4 * rocketProgress);
     final rocketY = size.height * 1.2 - (size.height * 1.4 * rocketProgress);
-    canvas.save();
-    canvas.translate(rocketX, rocketY);
-    _drawCachedEmoji(canvas, rocketPainter, Offset.zero);
-    canvas.restore();
+    _drawRocket(canvas, Offset(rocketX, rocketY), math.pi * 0.25);
 
-    // Nebula particles / Shooting Star ☄️
+    // Shooting Star
     final cometProgress = (time * 3.0 + 0.5) % 1.0;
     final cometX = size.width * 1.2 - (size.width * 1.4 * cometProgress);
     final cometY = size.height * -0.2 + (size.height * 1.4 * cometProgress);
-    canvas.save();
-    canvas.translate(cometX, cometY);
-    canvas.rotate(math.pi); // Pointing down-left
-    _drawCachedEmoji(canvas, cometPainter, Offset.zero);
-    canvas.restore();
+    final cometPaint = Paint()
+      ..shader = ui.Gradient.linear(
+        Offset(cometX, cometY),
+        Offset(cometX + 60, cometY - 60),
+        [Colors.white, Colors.white.withValues(alpha: 0.0)],
+      )
+      ..strokeWidth = 2.0;
+    canvas.drawLine(Offset(cometX, cometY), Offset(cometX + 60, cometY - 60), cometPaint);
+    canvas.drawCircle(Offset(cometX, cometY), 2.0, Paint()..color = Colors.white);
 
     // Orbital Paths
     final orbitPaint = Paint()
-      ..color = const Color(0xFF06B6D4).withValues(alpha: 0.2)
+      ..color = const Color(0xFF06B6D4).withValues(alpha: 0.15)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.0;
     
@@ -691,30 +766,204 @@ class _SpacePainter extends CustomPainter {
     canvas.drawCircle(center, 160, orbitPaint);
     canvas.drawCircle(center, 240, orbitPaint);
 
-    // Satellites 🛰️
+    // Satellites
     final angle1 = time * 2 * math.pi;
     final sat1X = center.dx + 160 * math.cos(angle1);
     final sat1Y = center.dy + 160 * math.sin(angle1);
-    
-    canvas.save();
-    canvas.translate(sat1X, sat1Y);
-    canvas.rotate(angle1 + math.pi / 2);
-    _drawCachedEmoji(canvas, satellitePainter, Offset.zero);
-    canvas.restore();
+    _drawSatellite(canvas, Offset(sat1X, sat1Y), angle1 + math.pi / 2);
     
     final angle2 = -time * 2 * math.pi * 0.6 + math.pi;
     final sat2X = center.dx + 240 * math.cos(angle2);
     final sat2Y = center.dy + 240 * math.sin(angle2);
-    
-    canvas.save();
-    canvas.translate(sat2X, sat2Y);
-    canvas.rotate(angle2 + math.pi / 2);
-    // Draw smaller satellite by scaling
-    canvas.scale(0.75);
-    _drawCachedEmoji(canvas, satellitePainter, Offset.zero);
-    canvas.restore();
+    _drawSatellite(canvas, Offset(sat2X, sat2Y), angle2 + math.pi / 2);
   }
 
   @override
   bool shouldRepaint(covariant _SpacePainter oldDelegate) => time != oldDelegate.time;
+}
+
+class _MiniatureISSMarker extends StatefulWidget {
+  final double heading;
+  const _MiniatureISSMarker({required this.heading});
+
+  @override
+  State<_MiniatureISSMarker> createState() => _MiniatureISSMarkerState();
+}
+
+class _MiniatureISSMarkerState extends State<_MiniatureISSMarker> with SingleTickerProviderStateMixin {
+  late AnimationController _rippleController;
+
+  @override
+  void initState() {
+    super.initState();
+    _rippleController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _rippleController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        // Ripple animation
+        AnimatedBuilder(
+          animation: _rippleController,
+          builder: (context, child) {
+            return Container(
+              width: 60 * _rippleController.value,
+              height: 60 * _rippleController.value,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: Colors.grey.withValues(alpha: 1.0 - _rippleController.value),
+                  width: 2,
+                ),
+                color: Colors.grey.withValues(alpha: (1.0 - _rippleController.value) * 0.2),
+              ),
+            );
+          },
+        ),
+        // ISS CustomPaint
+        CustomPaint(
+          size: const Size(60, 60),
+          painter: _ISSPainter(heading: widget.heading),
+        ),
+      ],
+    );
+  }
+}
+
+class _ISSPainter extends CustomPainter {
+  final double heading;
+  _ISSPainter({required this.heading});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    
+    // Rotate canvas based on the heading.
+    // The nose of the station points to the left (-X).
+    // Rotating by (heading + 90) aligns -X with the correct compass bearing.
+    canvas.rotate((heading + 90) * math.pi / 180.0);
+
+    // Hard drop shadow (bottom-right offset)
+    final shadowPaint = Paint()
+      ..color = Colors.black.withValues(alpha: 0.6)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 2);
+    
+    // Draw shadow first by shifting
+    canvas.save();
+    canvas.translate(2, 3);
+    _drawStationShapes(canvas, shadowPaint);
+    canvas.restore();
+
+    // Now draw the actual colored station
+    _drawStationShapes(canvas, null);
+
+    canvas.restore();
+  }
+
+  void _drawStationShapes(Canvas canvas, Paint? overridePaint) {
+    // Materials
+    final greyPaint = overridePaint ?? (Paint()..color = const Color(0xFF9CA3AF));
+    final lightGreyPaint = overridePaint ?? (Paint()..color = const Color(0xFFE5E7EB));
+    final darkGreyPaint = overridePaint ?? (Paint()..color = const Color(0xFF6B7280));
+    final goldPaint = overridePaint ?? (Paint()..color = const Color(0xFFD97706));
+    final solarPaint = overridePaint ?? (Paint()..color = const Color(0xFF1E3A8A));
+    final solarGridPaint = overridePaint ?? (Paint()..color = const Color(0xFF93C5FD).withValues(alpha: 0.3)..style = PaintingStyle.stroke..strokeWidth = 0.5);
+
+    // Solar panels (Left side, vertical)
+    if (overridePaint != null) {
+      canvas.drawRect(Rect.fromCenter(center: const Offset(-8, -16), width: 6, height: 22), overridePaint);
+      canvas.drawRect(Rect.fromCenter(center: const Offset(-8, 16), width: 6, height: 22), overridePaint);
+    } else {
+      void drawSolar(Offset pos) {
+        canvas.drawRect(Rect.fromCenter(center: pos, width: 6, height: 22), solarPaint);
+        // Grid
+        canvas.drawLine(Offset(pos.dx, pos.dy - 11), Offset(pos.dx, pos.dy + 11), solarGridPaint);
+        for (double i = -9; i <= 9; i += 3) {
+          canvas.drawLine(Offset(pos.dx - 3, pos.dy + i), Offset(pos.dx + 3, pos.dy + i), solarGridPaint);
+        }
+      }
+      drawSolar(const Offset(-8, -16));
+      drawSolar(const Offset(-8, 16));
+    }
+
+    // Radiator panels (Right side, vertical)
+    final radiatorRectTop = Rect.fromCenter(center: const Offset(8, -14), width: 4, height: 18);
+    final radiatorRectBottom = Rect.fromCenter(center: const Offset(8, 14), width: 4, height: 18);
+    if (overridePaint != null) {
+      canvas.drawRect(radiatorRectTop, overridePaint);
+      canvas.drawRect(radiatorRectBottom, overridePaint);
+    } else {
+      canvas.drawRect(radiatorRectTop, lightGreyPaint);
+      canvas.drawRect(radiatorRectBottom, lightGreyPaint);
+      final radGridPaint = Paint()..color = darkGreyPaint.color..style = PaintingStyle.stroke..strokeWidth = 0.5;
+      for (double i = -7; i <= 7; i += 3.5) {
+        canvas.drawLine(Offset(6, -14 + i), Offset(10, -14 + i), radGridPaint);
+        canvas.drawLine(Offset(6, 14 + i), Offset(10, 14 + i), radGridPaint);
+      }
+    }
+
+    // Central Body (Horizontal)
+    // Left Cone
+    final conePath = ui.Path();
+    conePath.moveTo(-20, -3);
+    conePath.lineTo(-12, -6);
+    conePath.lineTo(-12, 6);
+    conePath.lineTo(-20, 3);
+    conePath.close();
+    canvas.drawPath(conePath, greyPaint);
+
+    // Left Engine nozzles
+    if (overridePaint == null) {
+      canvas.drawRect(Rect.fromCenter(center: const Offset(-21, -1.5), width: 2, height: 1.5), darkGreyPaint);
+      canvas.drawRect(Rect.fromCenter(center: const Offset(-21, 1.5), width: 2, height: 1.5), darkGreyPaint);
+    } else {
+      canvas.drawRect(Rect.fromCenter(center: const Offset(-21, 0), width: 2, height: 5), overridePaint);
+    }
+
+    // Gold band
+    canvas.drawRect(Rect.fromCenter(center: const Offset(-10, 0), width: 4, height: 12), goldPaint);
+
+    // Core Modules (Cylinders)
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: const Offset(-2, 0), width: 12, height: 9), const Radius.circular(1.5)), lightGreyPaint);
+    canvas.drawRect(Rect.fromCenter(center: const Offset(5, 0), width: 2, height: 5), darkGreyPaint); // connector
+    
+    canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromCenter(center: const Offset(12, 0), width: 12, height: 9), const Radius.circular(1.5)), lightGreyPaint);
+    canvas.drawRect(Rect.fromCenter(center: const Offset(19, 0), width: 2, height: 5), darkGreyPaint); // connector
+    
+    // Right end module
+    final endPath = ui.Path();
+    endPath.moveTo(20, -4.5);
+    endPath.lineTo(25, -2.5);
+    endPath.lineTo(25, 2.5);
+    endPath.lineTo(20, 4.5);
+    endPath.close();
+    canvas.drawPath(endPath, greyPaint);
+    
+    canvas.drawRect(Rect.fromCenter(center: const Offset(26, 0), width: 2, height: 7), darkGreyPaint);
+    
+    // Right final nozzle
+    final nozzlePath = ui.Path();
+    nozzlePath.moveTo(27, -1.5);
+    nozzlePath.lineTo(31, -4);
+    nozzlePath.lineTo(31, 4);
+    nozzlePath.lineTo(27, 1.5);
+    nozzlePath.close();
+    canvas.drawPath(nozzlePath, darkGreyPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _ISSPainter oldDelegate) => false;
 }

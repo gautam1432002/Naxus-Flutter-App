@@ -5,8 +5,14 @@ import 'package:flutter/services.dart';
 class TactileGlassButton extends StatefulWidget {
   final IconData icon;
   final VoidCallback onTap;
+  final Color? iconColor;
 
-  const TactileGlassButton({super.key, required this.icon, required this.onTap});
+  const TactileGlassButton({
+    super.key, 
+    required this.icon, 
+    required this.onTap,
+    this.iconColor,
+  });
 
   @override
   State<TactileGlassButton> createState() => _TactileGlassButtonState();
@@ -39,11 +45,11 @@ class _TactileGlassButtonState extends State<TactileGlassButton> {
           height: 48,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: Colors.white.withOpacity(0.1),
-            border: Border.all(color: Colors.white.withOpacity(0.15)),
+            color: Colors.white.withValues(alpha: 0.1),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.2),
+                color: Colors.black.withValues(alpha: 0.2),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               )
@@ -56,7 +62,7 @@ class _TactileGlassButtonState extends State<TactileGlassButton> {
               child: Center(
                 child: Icon(
                   widget.icon,
-                  color: Colors.white,
+                  color: widget.iconColor ?? Colors.white,
                   size: 20,
                 ),
               ),
