@@ -20,6 +20,7 @@ import '../services/connectivity_service.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/error_state.dart';
 import '../widgets/tactile_glass_button.dart';
+import '../widgets/nexus_universal_header.dart';
 import '../widgets/weather_illustration.dart';
 import '../services/app_data_store.dart';
 
@@ -45,7 +46,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
   WeatherModel? _weather;
   bool _isLoading = true;
   String? _error;
-  ActiveDashboardCard _activeCard = ActiveDashboardCard.weather;
+  ActiveDashboardCard _activeCard = ActiveDashboardCard.aqi;
 
   @override
   void initState() {
@@ -155,6 +156,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      elevation: 0,
       isScrollControlled: true,
       builder: (context) => _SearchBottomSheet(
         onSelect: (location) async {
@@ -176,13 +178,14 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
+      elevation: 0,
       builder: (context) {
         return Container(
           margin: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.20),
+            color: Colors.white.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1.0),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1.0),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.04),
@@ -340,20 +343,20 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
-              color: Colors.white.withValues(alpha: 0.20),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1.0),
+              color: Colors.white.withValues(alpha: 0.45),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.65), width: 1.2),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.04),
-                  blurRadius: 20,
-                  offset: const Offset(0, 10),
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
                 ),
               ],
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(24),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   child: Column(
@@ -400,20 +403,20 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-          color: Colors.white.withValues(alpha: 0.20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1.0),
+          color: Colors.white.withValues(alpha: 0.45),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.65), width: 1.2),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+              color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -486,22 +489,22 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: isActive 
-              ? [Colors.white.withValues(alpha: 0.10), Colors.white.withValues(alpha: 0.02)]
-              : [Colors.white.withValues(alpha: 0.05), Colors.white.withValues(alpha: 0.01)],
+              ? [Colors.white.withValues(alpha: 0.55), Colors.white.withValues(alpha: 0.35)]
+              : [Colors.white.withValues(alpha: 0.30), Colors.white.withValues(alpha: 0.15)],
           ),
-          border: Border.all(color: Colors.white.withValues(alpha: isActive ? 0.25 : 0.10), width: 1.0),
+          border: Border.all(color: Colors.white.withValues(alpha: isActive ? 0.75 : 0.40), width: 1.2),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: isActive ? 0.08 : 0.02),
-              blurRadius: isActive ? 40 : 20,
-              offset: const Offset(0, 10),
+              color: const Color(0xFF0F172A).withValues(alpha: isActive ? 0.08 : 0.03),
+              blurRadius: isActive ? 24 : 12,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(28),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Row(
@@ -583,22 +586,22 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: isActive 
-              ? [Colors.white.withValues(alpha: 0.15), Colors.white.withValues(alpha: 0.05)]
-              : [Colors.white.withValues(alpha: 0.05), Colors.white.withValues(alpha: 0.02)],
+              ? [Colors.white.withValues(alpha: 0.55), Colors.white.withValues(alpha: 0.35)]
+              : [Colors.white.withValues(alpha: 0.30), Colors.white.withValues(alpha: 0.15)],
           ),
-          border: Border.all(color: Colors.white.withValues(alpha: isActive ? 0.35 : 0.15), width: 1.0),
+          border: Border.all(color: Colors.white.withValues(alpha: isActive ? 0.75 : 0.40), width: 1.2),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: isActive ? 0.08 : 0.02),
-              blurRadius: isActive ? 30 : 15,
-              offset: const Offset(0, 10),
+              color: const Color(0xFF0F172A).withValues(alpha: isActive ? 0.08 : 0.03),
+              blurRadius: isActive ? 24 : 12,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(28),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 30, sigmaY: 30),
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
               child: RepaintBoundary(
@@ -937,36 +940,21 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
             ],
           ),
 
-          // Layer 2: Fixed Hovering Header
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
-                child: Row(
-                  children: [
-                    TactileGlassButton(
-                      icon: Icons.arrow_back_ios_new,
-                      onTap: () => Navigator.of(context).pop(),
-                    ),
-                    const Spacer(),
-                    if (_currentLocation != null)
-                      TactileGlassButton(
-                        icon: Icons.star_border,
-                        onTap: _saveCurrentLocation,
-                      ),
-                    const SizedBox(width: 12),
-                    TactileGlassButton(
-                      icon: Icons.search,
-                      onTap: _openSearchSheet,
-                    ),
-                  ],
+          // Layer 2: Fixed Hovering Header (Universal)
+          NexusUniversalHeader(
+            onBack: () => Navigator.of(context).pop(),
+            actions: [
+              if (_currentLocation != null)
+                TactileGlassButton(
+                  icon: Icons.star_border,
+                  onTap: _saveCurrentLocation,
                 ),
+              const SizedBox(width: 4),
+              TactileGlassButton(
+                icon: Icons.search,
+                onTap: _openSearchSheet,
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -1021,24 +1009,16 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: MediaQuery.of(context).size.height * 0.85,
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.10),
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.3), width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 40,
-            offset: const Offset(0, -10),
+    return ClipRRect(
+      borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.85,
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.12),
+            border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.15), width: 1)),
           ),
-        ]
-      ),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(40)),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
           child: Padding(
             padding: EdgeInsets.only(
               top: 24,
@@ -1049,43 +1029,38 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
             child: Column(
               children: [
                 // Top Pill
-                Container(
-                  width: 48,
-                  height: 6,
-                  margin: const EdgeInsets.only(bottom: 24, top: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFCBD5E1).withValues(alpha: 0.8),
-                    borderRadius: BorderRadius.circular(3),
+                Center(
+                  child: Container(
+                    width: 48,
+                    height: 5,
+                    margin: const EdgeInsets.only(bottom: 32),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.4),
+                      borderRadius: BorderRadius.circular(2.5),
+                    ),
                   ),
                 ),
                 
                 // Search Bar
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.25),
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1.0),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.03),
-                        blurRadius: 15,
-                        offset: const Offset(0, 5),
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(24),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1.0),
                       ),
-                    ],
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                       child: TextField(
                         autofocus: true,
-                        style: const TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w600, fontSize: 16),
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
                         decoration: InputDecoration(
                           hintText: 'Search city...',
-                          hintStyle: TextStyle(color: const Color(0xFF64748B).withValues(alpha: 0.8)),
+                          hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
                           filled: true,
                           fillColor: Colors.transparent,
-                          prefixIcon: const Icon(Icons.search, color: Color(0xFF0284C7)),
+                          prefixIcon: const Icon(Icons.search, color: Colors.white),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(24),
                             borderSide: BorderSide.none,
@@ -1103,7 +1078,7 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
                 if (_isSearching)
                   const Expanded(
                     child: Center(
-                      child: CircularProgressIndicator(color: Color(0xFF0284C7)),
+                      child: CircularProgressIndicator(color: Colors.white),
                     ),
                   )
                 else
@@ -1114,23 +1089,16 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
                       separatorBuilder: (context, index) => const SizedBox(height: 16),
                       itemBuilder: (context, index) {
                         final loc = _searchResults[index];
-                        return Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.2),
-                            borderRadius: BorderRadius.circular(24),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1.0),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.02),
-                                blurRadius: 15,
-                                offset: const Offset(0, 5),
+                        return ClipRRect(
+                          borderRadius: BorderRadius.circular(24),
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.05),
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.0),
                               ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(24),
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
                               child: Material(
                                 color: Colors.transparent,
                                 child: InkWell(
@@ -1146,11 +1114,11 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
                                         Container(
                                           padding: const EdgeInsets.all(12),
                                           decoration: BoxDecoration(
-                                            color: Colors.white.withValues(alpha: 0.3),
+                                            color: Colors.white.withValues(alpha: 0.1),
                                             borderRadius: BorderRadius.circular(16),
-                                            border: Border.all(color: Colors.white.withValues(alpha: 0.4), width: 1.0),
+                                            border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1.0),
                                           ),
-                                          child: const Icon(Icons.location_on_rounded, color: Color(0xFF334155), size: 24),
+                                          child: const Icon(Icons.location_on_rounded, color: Colors.white, size: 24),
                                         ),
                                         const SizedBox(width: 16),
                                         Expanded(
@@ -1160,25 +1128,23 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
                                               Text(
                                                 loc.name,
                                                 style: const TextStyle(
-                                                  color: Color(0xFF0F172A),
+                                                  color: Colors.white,
                                                   fontSize: 18,
-                                                  fontWeight: FontWeight.w800,
-                                                  letterSpacing: -0.3,
+                                                  fontWeight: FontWeight.w600,
+                                                  letterSpacing: 0.2,
                                                 ),
                                               ),
                                               const SizedBox(height: 4),
                                               Text(
                                                 loc.country,
-                                                style: const TextStyle(
-                                                  color: Color(0xFF64748B),
+                                                style: TextStyle(
+                                                  color: Colors.white.withValues(alpha: 0.6),
                                                   fontSize: 14,
-                                                  fontWeight: FontWeight.w600,
                                                 ),
                                               ),
                                             ],
                                           ),
                                         ),
-                                        const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8)),
                                       ],
                                     ),
                                   ),

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/iss_model.dart';
-import '../widgets/tactile_glass_button.dart';
+import '../widgets/nexus_universal_header.dart';
 
 class FullscreenMapScreen extends StatelessWidget {
   final IssModel issPosition;
@@ -79,18 +79,13 @@ class FullscreenMapScreen extends StatelessWidget {
                 ),
               ),
 
-              // Back Button
-              SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  child: TactileGlassButton(
-                    icon: Icons.close,
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      Navigator.pop(context);
-                    },
-                  ),
-                ),
+              // Back Button (Universal)
+              NexusUniversalHeader(
+                backIcon: Icons.close,
+                onBack: () {
+                  HapticFeedback.lightImpact();
+                  Navigator.pop(context);
+                },
               ),
             ],
           ),

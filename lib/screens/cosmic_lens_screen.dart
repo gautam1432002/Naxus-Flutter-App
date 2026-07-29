@@ -14,6 +14,7 @@ import 'package:animations/animations.dart';
 import 'package:flutter/services.dart';
 import 'dart:ui';
 import '../widgets/tactile_glass_button.dart';
+import '../widgets/nexus_universal_header.dart';
 
 class CosmicLensScreen extends StatefulWidget {
   const CosmicLensScreen({super.key});
@@ -111,13 +112,7 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
               color: const Color(0xFF1E293B).withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.0),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
-                )
-              ],
+              boxShadow: AppTheme.bentoShadow,
             ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
@@ -361,34 +356,19 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
             ],
           ),
 
-          // Floating Navigation Row (Overlay)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TactileGlassButton(
-                      icon: Icons.arrow_back_ios_new,
-                      onTap: () => Navigator.of(context).pop(),
-                    ),
-                    TactileGlassButton(
-                      icon: _isFavorite ? Icons.favorite : Icons.favorite_border,
-                      iconColor: _isFavorite ? accentColor : Colors.white,
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        setState(() => _isFavorite = !_isFavorite);
-                      },
-                    ),
-                  ],
-                ),
+          // Floating Navigation Row (Universal)
+          NexusUniversalHeader(
+            onBack: () => Navigator.of(context).pop(),
+            actions: [
+              TactileGlassButton(
+                icon: _isFavorite ? Icons.favorite : Icons.favorite_border,
+                iconColor: _isFavorite ? accentColor : Colors.white,
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  setState(() => _isFavorite = !_isFavorite);
+                },
               ),
-            ),
+            ],
           ),
         ],
       ),

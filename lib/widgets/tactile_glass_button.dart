@@ -36,7 +36,7 @@ class _TactileGlassButtonState extends State<TactileGlassButton> {
         setState(() => _isPressed = false);
       },
       child: AnimatedScale(
-        scale: _isPressed ? 0.90 : 1.0,
+        scale: _isPressed ? 0.95 : 1.0,
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOutCubic,
         child: Container(
@@ -46,7 +46,6 @@ class _TactileGlassButtonState extends State<TactileGlassButton> {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: Colors.white.withValues(alpha: 0.1),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.2),
@@ -58,12 +57,15 @@ class _TactileGlassButtonState extends State<TactileGlassButton> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(30),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-              child: Center(
-                child: Icon(
-                  widget.icon,
-                  color: widget.iconColor ?? Colors.white,
-                  size: 20,
+              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              child: CustomPaint(
+                painter: _GradientRimPainter(),
+                child: Center(
+                  child: Icon(
+                    widget.icon,
+                    color: widget.iconColor ?? Colors.white,
+                    size: 20,
+                  ),
                 ),
               ),
             ),
@@ -72,4 +74,27 @@ class _TactileGlassButtonState extends State<TactileGlassButton> {
       ),
     );
   }
+}
+
+/// Paints a specular gradient rim border on a circle.
+class _GradientRimPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final rect = Offset.zero & size;
+    final paint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          Color.fromRGBO(255, 255, 255, 0.40),
+          Color.fromRGBO(255, 255, 255, 0.10),
+        ],
+      ).createShader(rect)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    canvas.drawOval(rect.deflate(0.5), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

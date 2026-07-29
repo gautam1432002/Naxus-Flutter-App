@@ -1,12 +1,14 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../theme/app_theme.dart';
 import '../models/history_event_model.dart';
 import '../services/wiki_service.dart';
 import '../services/connectivity_service.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/error_state.dart';
 import '../widgets/tactile_glass_button.dart';
+import '../widgets/nexus_universal_header.dart';
 import '../services/app_data_store.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
@@ -261,29 +263,15 @@ class _EchoesScreenState extends State<EchoesScreen> {
             ],
           ),
           
-          // Floating Header (Safe-area aware)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TactileGlassButton(
-                      icon: Icons.arrow_back_ios_new,
-                      onTap: () => Navigator.of(context).pop(),
-                    ),
-                    TactileGlassButton(
-                      icon: Icons.refresh,
-                      onTap: _loadEvents,
-                    ),
-                  ],
-                ),
+          // Floating Header (Universal)
+          NexusUniversalHeader(
+            onBack: () => Navigator.of(context).pop(),
+            actions: [
+              TactileGlassButton(
+                icon: Icons.refresh,
+                onTap: _loadEvents,
               ),
-            ),
+            ],
           ),
         ],
       ),
@@ -389,11 +377,11 @@ class _ChronoSpineRow extends StatelessWidget {
                       color: isExpanded ? const Color(0xFF06B6D4) : Colors.white.withOpacity(0.05),
                       width: isExpanded ? 2.0 : 1.0,
                     ),
-                    boxShadow: [
+                    boxShadow: isExpanded ? AppTheme.bentoShadow : [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 24,
-                        offset: const Offset(0, 8),
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 5),
                       )
                     ],
                   ),

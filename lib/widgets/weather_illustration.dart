@@ -67,9 +67,11 @@ class _WeatherPainter extends CustomPainter {
         _drawSun(canvas, Offset(center.dx + 20, center.dy - 20), size.width * 0.25);
       }
       _drawCloud(canvas, center, size.width * 0.8, const Color(0xFFF8FAFC));
-    } else if (condition.contains('rain') || condition.contains('drizzle')) {
+    } else if (condition.contains('rain') || condition.contains('drizzle') || condition.contains('thunder') || condition.contains('storm')) {
       _drawCloud(canvas, Offset(center.dx, center.dy - 10), size.width * 0.7, const Color(0xFFCBD5E1));
-      _drawRain(canvas, size);
+      if (condition.contains('rain') || condition.contains('drizzle') || condition.contains('storm')) {
+        _drawRain(canvas, size);
+      }
       if (condition.contains('thunder') || condition.contains('storm')) {
         _drawLightning(canvas, size);
       }

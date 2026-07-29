@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../theme/app_theme.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/iss_model.dart';
@@ -12,6 +13,7 @@ import '../services/connectivity_service.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/error_state.dart';
 import '../widgets/tactile_glass_button.dart';
+import '../widgets/nexus_universal_header.dart';
 import '../services/app_data_store.dart';
 import 'fullscreen_map_screen.dart';
 
@@ -195,13 +197,7 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
         borderRadius: BorderRadius.circular(24),
         color: Colors.white.withValues(alpha: 0.05),
         border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        boxShadow: AppTheme.bentoShadow,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
@@ -407,13 +403,7 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                                       color: (_isReconnecting ? const Color(0xFFF59E0B) : const Color(0xFF06B6D4)).withValues(alpha: 0.3), 
                                       width: 1.5,
                                     ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF06B6D4).withValues(alpha: 0.15),
-                                        blurRadius: 30,
-                                        offset: const Offset(0, 15),
-                                      ),
-                                    ],
+                                    boxShadow: AppTheme.bentoShadow,
                                   ),
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(36),
@@ -466,33 +456,18 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                     ],
                   ),
           
-          // Floating Navigation Row (Overlay)
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: SafeArea(
-              bottom: false,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    TactileGlassButton(
-                      icon: Icons.arrow_back_ios_new,
-                      onTap: () => Navigator.of(context).pop(),
-                    ),
-                    TactileGlassButton(
-                      icon: Icons.my_location,
-                      onTap: () {
-                        HapticFeedback.lightImpact();
-                        _loadDataAndCenterMap();
-                      },
-                    ),
-                  ],
-                ),
+          // Floating Navigation Row (Universal)
+          NexusUniversalHeader(
+            onBack: () => Navigator.of(context).pop(),
+            actions: [
+              TactileGlassButton(
+                icon: Icons.my_location,
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  _loadDataAndCenterMap();
+                },
               ),
-            ),
+            ],
           ),
         ],
       ),

@@ -55,7 +55,7 @@ class _FrostedBackButtonState extends State<FrostedBackButton> {
               child: Container(
                 width: 44,
                 height: 44,
-                color: Colors.black.withValues(alpha: 0.3),
+                color: Colors.black.withValues(alpha: 0.10),
                 alignment: Alignment.center,
                 child: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
               ),

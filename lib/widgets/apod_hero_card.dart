@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../models/apod_model.dart';
+import '../theme/app_theme.dart';
 import 'fullscreen_image_viewer.dart';
 import 'apod_video_player.dart';
 import 'package:animations/animations.dart';
@@ -33,10 +34,10 @@ class ApodHeroCard extends StatelessWidget {
             return ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+                filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: const Color(0xFF0F172A).withValues(alpha: 0.55),
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.12),
                     border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.15), width: 1)),
                   ),
                   child: ListView(
@@ -103,16 +104,10 @@ class ApodHeroCard extends StatelessWidget {
     return Container(
       height: 480,
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B).withValues(alpha: 0.5),
+        color: const Color(0xFF1E293B).withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(28),
         border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.0),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.2),
-            blurRadius: 24,
-            offset: const Offset(0, 8),
-          )
-        ],
+        boxShadow: AppTheme.bentoShadow,
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(26.5),
