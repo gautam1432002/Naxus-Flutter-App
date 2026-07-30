@@ -102,9 +102,9 @@ class _EchoesScreenState extends State<EchoesScreen> {
               height: 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF06B6D4).withOpacity(0.08),
+                color: const Color(0xFF06B6D4).withValues(alpha: 0.08),
                 boxShadow: [
-                  BoxShadow(color: const Color(0xFF06B6D4).withOpacity(0.08), blurRadius: 100, spreadRadius: 50)
+                  BoxShadow(color: const Color(0xFF06B6D4).withValues(alpha: 0.08), blurRadius: 100, spreadRadius: 50)
                 ]
               ),
             ),
@@ -118,9 +118,9 @@ class _EchoesScreenState extends State<EchoesScreen> {
               height: 300,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: const Color(0xFF3B82F6).withOpacity(0.08),
+                color: const Color(0xFF3B82F6).withValues(alpha: 0.08),
                 boxShadow: [
-                  BoxShadow(color: const Color(0xFF3B82F6).withOpacity(0.08), blurRadius: 100, spreadRadius: 50)
+                  BoxShadow(color: const Color(0xFF3B82F6).withValues(alpha: 0.08), blurRadius: 100, spreadRadius: 50)
                 ]
               ),
             ),
@@ -166,9 +166,9 @@ class _EchoesScreenState extends State<EchoesScreen> {
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.1),
+                          color: Colors.white.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.white.withOpacity(0.2)),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -318,7 +318,7 @@ class _ChronoSpineRow extends StatelessWidget {
                       color: isExpanded ? const Color(0xFF06B6D4) : const Color(0xFF475569),
                       boxShadow: isExpanded ? [
                         BoxShadow(
-                          color: const Color(0xFF06B6D4).withOpacity(0.4),
+                          color: const Color(0xFF06B6D4).withValues(alpha: 0.4),
                           blurRadius: 12,
                           spreadRadius: 2,
                         )
@@ -372,9 +372,9 @@ class _ChronoSpineRow extends StatelessWidget {
                   curve: Curves.easeInOutCubic,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(28),
-                    color: const Color(0xFF1E293B).withOpacity(0.5),
+                    color: const Color(0xFF1E293B).withValues(alpha: 0.5),
                     border: Border.all(
-                      color: isExpanded ? const Color(0xFF06B6D4) : Colors.white.withOpacity(0.05),
+                      color: isExpanded ? const Color(0xFF06B6D4) : Colors.white.withValues(alpha: 0.05),
                       width: isExpanded ? 2.0 : 1.0,
                     ),
                     boxShadow: isExpanded ? AppTheme.bentoShadow : [
@@ -447,7 +447,7 @@ class _ChronoSpineRow extends StatelessWidget {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                   decoration: BoxDecoration(
-                                    color: const Color(0xFF06B6D4).withOpacity(0.15),
+                                    color: const Color(0xFF06B6D4).withValues(alpha: 0.15),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Row(

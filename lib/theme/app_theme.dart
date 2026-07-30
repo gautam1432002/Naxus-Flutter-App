@@ -14,20 +14,7 @@ class AppTheme {
     ),
   );
 
-  static List<BoxShadow> get bentoShadow => [
-    BoxShadow(
-      color: Colors.black.withValues(alpha: 0.5),
-      blurRadius: 40,
-      offset: const Offset(0, 20),
-      spreadRadius: -8,
-    ),
-    BoxShadow(
-      color: Colors.black.withValues(alpha: 0.3),
-      blurRadius: 16,
-      offset: const Offset(0, 8),
-      spreadRadius: -4,
-    ),
-  ];
+  static List<BoxShadow> get bentoShadow => [];
 
   static ThemeData get darkTheme {
     return ThemeData(
@@ -39,24 +26,24 @@ class AppTheme {
         surface: deepNavy,
       ),
       textTheme: TextTheme(
-        displayLarge: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.bold),
-        displayMedium: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.bold),
-        displaySmall: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.bold),
-        headlineMedium: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.w600),
-        headlineSmall: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.w600),
-        titleLarge: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.w600),
-        titleMedium: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.w600),
-        titleSmall: GoogleFonts.spaceGrotesk(color: Colors.white, fontWeight: FontWeight.w600),
-        bodyLarge: GoogleFonts.inter(color: Colors.white70),
-        bodyMedium: GoogleFonts.inter(color: Colors.white70),
-        bodySmall: GoogleFonts.inter(color: Colors.white70),
-        labelLarge: GoogleFonts.inter(color: Colors.white, fontWeight: FontWeight.bold),
+        displayLarge: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
+        displayMedium: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
+        displaySmall: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
+        headlineMedium: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600),
+        headlineSmall: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600),
+        titleLarge: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600),
+        titleMedium: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600),
+        titleSmall: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.w600),
+        bodyLarge: GoogleFonts.outfit(color: Colors.white70),
+        bodyMedium: GoogleFonts.outfit(color: Colors.white70),
+        bodySmall: GoogleFonts.outfit(color: Colors.white70),
+        labelLarge: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
       ),
       appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         centerTitle: true,
-        titleTextStyle: GoogleFonts.spaceGrotesk(
+        titleTextStyle: GoogleFonts.outfit(
           color: Colors.white,
           fontSize: 22,
           fontWeight: FontWeight.bold,

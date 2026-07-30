@@ -39,32 +39,29 @@ class _TactileGlassButtonState extends State<TactileGlassButton> {
         scale: _isPressed ? 0.95 : 1.0,
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOutCubic,
-        child: Container(
-          margin: const EdgeInsets.all(8.0),
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: Colors.white.withValues(alpha: 0.1),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.2),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              )
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(30),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-              child: CustomPaint(
-                painter: _GradientRimPainter(),
-                child: Center(
-                  child: Icon(
-                    widget.icon,
-                    color: widget.iconColor ?? Colors.white,
-                    size: 20,
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: SizedBox(
+            width: 48,
+            height: 48,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.15),
+                    border: Border.all(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      width: 0.5,
+                    ),
+                  ),
+                  child: Center(
+                    child: Icon(
+                      widget.icon,
+                      color: widget.iconColor ?? Colors.white,
+                      size: 22,
+                    ),
                   ),
                 ),
               ),

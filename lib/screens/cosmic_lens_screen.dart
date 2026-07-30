@@ -121,9 +121,26 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    if (apod.mediaType == 'video')
-                      const Icon(Icons.play_circle_outline, color: Colors.white54, size: 48)
-                    else
+                    if (apod.isVideo) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(16.0),
+                        child: Image.network(
+                          apod.youtubeThumbnail ?? 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop',
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      Center(
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.5),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                          ),
+                          child: const Icon(Icons.play_arrow, color: Colors.white, size: 36),
+                        ),
+                      ),
+                    ] else
                       Hero(
                         tag: 'apod_hero_${apod.date}',
                         flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {

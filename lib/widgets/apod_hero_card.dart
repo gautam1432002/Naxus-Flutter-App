@@ -18,6 +18,26 @@ class ApodHeroCard extends StatelessWidget {
     required this.heroTag,
   });
 
+  String? _getYoutubeThumbnail(String url) {
+    final uri = Uri.tryParse(url);
+    if (uri != null && (uri.host.contains('youtube.com') || uri.host.contains('youtu.be'))) {
+      String? videoId;
+      if (uri.host.contains('youtu.be')) {
+        videoId = uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
+      } else if (uri.path.contains('embed/')) {
+        videoId = uri.pathSegments.last;
+      } else {
+        videoId = uri.queryParameters['v'];
+      }
+      if (videoId != null && videoId.isNotEmpty) {
+        // Drop any query params from the videoId (like ?rel=0)
+        final cleanId = videoId.split('?').first;
+        return 'https://img.youtube.com/vi/$cleanId/hqdefault.jpg';
+      }
+    }
+    return null;
+  }
+
   void _openArticle(BuildContext context) {
     showModalBottomSheet(
       context: context,
@@ -68,6 +88,16 @@ class ApodHeroCard extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 24),
+                      if (apod.mediaType == 'video') ...[
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(16),
+                          child: SizedBox(
+                            height: 220,
+                            child: ApodVideoPlayer(videoUrl: apod.url),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
                       Text(
                         apod.title,
                         style: const TextStyle(
@@ -101,6 +131,10 @@ class ApodHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final bool isVideo = apod.mediaType == 'video';
+    final String? thumbnailUrl = isVideo ? _getYoutubeThumbnail(apod.url) : null;
+    final String imageUrl = thumbnailUrl ?? (isVideo ? 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop' : apod.url);
+
     return Container(
       height: 480,
       decoration: BoxDecoration(
@@ -116,52 +150,79 @@ class ApodHeroCard extends StatelessWidget {
           child: Stack(
           children: [
             // Image / Video Content
-            if (apod.mediaType == 'video')
-              Positioned.fill(child: ApodVideoPlayer(videoUrl: apod.url))
-            else
-              Positioned.fill(
-                child: OpenContainer(
-                  tappable: false,
-                  transitionType: ContainerTransitionType.fade,
-                  transitionDuration: const Duration(milliseconds: 600),
-                  openColor: Colors.transparent,
-                  closedColor: Colors.transparent,
-                  closedElevation: 0,
-                  openElevation: 0,
-                  openBuilder: (context, _) => FullscreenImageViewer(
+            Positioned.fill(
+              child: OpenContainer(
+                tappable: false,
+                transitionType: ContainerTransitionType.fade,
+                transitionDuration: const Duration(milliseconds: 600),
+                openColor: Colors.transparent,
+                closedColor: Colors.transparent,
+                closedElevation: 0,
+                openElevation: 0,
+                openBuilder: (context, _) {
+                  if (isVideo) {
+                    return Scaffold(
+                      backgroundColor: Colors.black,
+                      appBar: AppBar(
+                        backgroundColor: Colors.transparent,
+                        iconTheme: const IconThemeData(color: Colors.white),
+                        elevation: 0,
+                      ),
+                      body: Center(child: ApodVideoPlayer(videoUrl: apod.url)),
+                    );
+                  }
+                  return FullscreenImageViewer(
                     imageUrl: apod.url,
                     heroTag: heroTag,
-                  ),
-                  closedBuilder: (context, openContainer) => GestureDetector(
-                    onLongPress: openContainer,
-                    child: Hero(
-                      tag: heroTag,
-                      flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
-                        return ClipRRect(
-                          borderRadius: BorderRadius.circular(24.0),
-                          child: toHeroContext.widget,
-                        );
-                      },
-                      child: ClipRRect(
+                  );
+                },
+                closedBuilder: (context, openContainer) => GestureDetector(
+                  onLongPress: openContainer,
+                  child: Hero(
+                    tag: heroTag,
+                    flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
+                      return ClipRRect(
                         borderRadius: BorderRadius.circular(24.0),
-                        child: Image.network(
-                          apod.url,
-                          fit: BoxFit.cover,
-                          frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                            if (wasSynchronouslyLoaded) return child;
-                            return AnimatedOpacity(
-                              opacity: frame == null ? 0 : 1,
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                              child: child,
-                            );
-                          },
-                        ),
+                        child: toHeroContext.widget,
+                      );
+                    },
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(24.0),
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          Image.network(
+                            imageUrl,
+                            fit: BoxFit.cover,
+                            frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                              if (wasSynchronouslyLoaded) return child;
+                              return AnimatedOpacity(
+                                opacity: frame == null ? 0 : 1,
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                                child: child,
+                              );
+                            },
+                          ),
+                          if (isVideo)
+                            Center(
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withValues(alpha: 0.5),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                                ),
+                                child: const Icon(Icons.play_arrow, color: Colors.white, size: 48),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                   ),
                 ),
               ),
+            ),
             
             // Gradient Scrim
             Positioned(

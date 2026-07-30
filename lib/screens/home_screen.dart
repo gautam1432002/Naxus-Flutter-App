@@ -102,6 +102,64 @@ class _HomeScreenState extends State<HomeScreen> {
         backgroundColor: Colors.transparent,
         body: Stack(
           children: [
+            // Dynamic Ambient Aura
+            Positioned.fill(
+              child: AnimatedBuilder(
+                animation: _pageController,
+                builder: (context, child) {
+                  double page = 0.0;
+                  if (_pageController.hasClients && _pageController.position.haveDimensions) {
+                    page = _pageController.page ?? 0.0;
+                  }
+                  
+                  // Interpolate color based on the current page
+                  int lowerIndex = page.floor().clamp(0, _cards.length - 1);
+                  int upperIndex = page.ceil().clamp(0, _cards.length - 1);
+                  double fraction = page - lowerIndex;
+                  
+                  Color activeColor = Color.lerp(
+                    _cards[lowerIndex].primaryColor,
+                    _cards[upperIndex].primaryColor,
+                    fraction,
+                  ) ?? Colors.transparent;
+
+                  return Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      // Ambient Base Vignette to separate cards from the deep background
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.black.withValues(alpha: 0.1),
+                              activeColor.withValues(alpha: 0.15),
+                              Colors.black.withValues(alpha: 0.4), // Darker at the bottom for depth
+                            ],
+                            stops: const [0.0, 0.5, 1.0],
+                          ),
+                        ),
+                      ),
+                      // Soft Central Glow for the active card
+                      Container(
+                        decoration: BoxDecoration(
+                          gradient: RadialGradient(
+                            center: Alignment.center,
+                            radius: 1.0,
+                            colors: [
+                              activeColor.withValues(alpha: 0.2), // Soft center glow
+                              Colors.transparent,
+                            ],
+                            stops: const [0.2, 1.0],
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
             // Static Starfield Background
             Positioned.fill(
               child: RepaintBoundary(
@@ -162,14 +220,16 @@ class _HomeScreenState extends State<HomeScreen> {
                                 opacity = 1.0 - (0.4 * diff.abs()); 
                                 rotateY = -8 * diff * (pi / 180); 
                                 translationX = 130 * diff; 
-                              } else if (diff.abs() <= 2.001) {
+                              } else if (diff.abs() <= 1.5) {
+                                // Smoothly fade out the back cards to prevent pop-in
                                 scale = 0.85 - (0.15 * (diff.abs() - 1)); 
-                                opacity = 0.6 - (0.3 * (diff.abs() - 1)); 
+                                opacity = 0.6 * (1.0 - ((diff.abs() - 1.0) / 0.5)); // fades from 0.6 to 0.0
                                 rotateY = -12 * diff.sign * (pi / 180);
-                                translationX = (130 + 100 * (diff.abs() - 1)) * diff.sign;
+                                translationX = (130 + 50 * (diff.abs() - 1)) * diff.sign;
                               } else {
                                 scale = 0.5;
                                 opacity = 0.0;
+                                rotateY = 0;
                                 translationX = 0;
                               }
 
@@ -189,7 +249,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                     height: 500,
                                     // Ignore pointers on the visual layer so the top PageView catches gestures
                                     child: IgnorePointer(
-                                      child: CarouselCard(info: _cards[index]),
+                                      child: CarouselCard(
+                                        info: _cards[index],
+                                        diff: diff,
+                                      ),
                                     ),
                                   ),
                                 ),

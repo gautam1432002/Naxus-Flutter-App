@@ -37,4 +37,26 @@ class ApodModel {
       return date;
     }
   }
+
+  bool get isVideo => mediaType == 'video';
+
+  String? get youtubeThumbnail {
+    if (!isVideo) return null;
+    final uri = Uri.tryParse(url);
+    if (uri != null && (uri.host.contains('youtube.com') || uri.host.contains('youtu.be'))) {
+      String? videoId;
+      if (uri.host.contains('youtu.be')) {
+        videoId = uri.pathSegments.isNotEmpty ? uri.pathSegments.first : null;
+      } else if (uri.path.contains('embed/')) {
+        videoId = uri.pathSegments.last;
+      } else {
+        videoId = uri.queryParameters['v'];
+      }
+      if (videoId != null && videoId.isNotEmpty) {
+        final cleanId = videoId.split('?').first;
+        return 'https://img.youtube.com/vi/$cleanId/hqdefault.jpg';
+      }
+    }
+    return null;
+  }
 }
