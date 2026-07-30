@@ -1,12 +1,13 @@
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/apod_model.dart';
+import '../models/data_result.dart';
 import 'api_client.dart';
 
 class NasaService {
   static const String _baseUrl = 'https://api.nasa.gov/planetary/apod';
   final ApiClient _apiClient = ApiClient();
 
-  Future<ApodModel> fetchApod({String? date}) async {
+  Future<DataResult<ApodModel>> fetchApod({String? date}) async {
     final apiKey = dotenv.env['NASA_API_KEY'];
     if (apiKey == null || apiKey.isEmpty || apiKey == 'PASTE_YOUR_KEY_HERE') {
       throw Exception('NASA_API_KEY is missing or invalid in .env file.');
@@ -18,10 +19,13 @@ class NasaService {
     }
     
     final response = await _apiClient.getJson(url, cacheKey: date != null ? 'apod_$date' : 'apod_today');
-    return ApodModel.fromJson(response.data);
+    return DataResult(
+      ApodModel.fromJson(response.data),
+      isOffline: response.isStale,
+    );
   }
 
-  Future<List<ApodModel>> fetchApodRange() async {
+  Future<DataResult<List<ApodModel>>> fetchApodRange() async {
     final apiKey = dotenv.env['NASA_API_KEY'];
     if (apiKey == null || apiKey.isEmpty || apiKey == 'PASTE_YOUR_KEY_HERE') {
       throw Exception('NASA_API_KEY is missing or invalid in .env file.');
@@ -43,6 +47,9 @@ class NasaService {
     
     final List<dynamic> data = response.data;
     final list = data.map((json) => ApodModel.fromJson(json as Map<String, dynamic>)).toList();
-    return list.reversed.toList();
+    return DataResult(
+      list.reversed.toList(),
+      isOffline: response.isStale,
+    );
   }
 }

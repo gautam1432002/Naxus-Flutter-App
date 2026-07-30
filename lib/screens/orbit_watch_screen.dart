@@ -8,7 +8,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/iss_model.dart';
 import '../services/iss_service.dart';
-import '../services/connectivity_service.dart';
 
 import '../widgets/skeleton_loader.dart';
 import '../widgets/error_state.dart';
@@ -26,7 +25,6 @@ class OrbitWatchScreen extends StatefulWidget {
 
 class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProviderStateMixin {
   final IssService _issService = IssService();
-  final ConnectivityService _connectivityService = ConnectivityService();
   final MapController _mapController = MapController();
   
   IssModel? _issPosition;
@@ -40,6 +38,7 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
   AnimationController? _mapAnimationController;
 
   bool _isReconnecting = false;
+  bool _isOffline = false;
 
   double _calculateBearing(double lat1, double lon1, double lat2, double lon2) {
     final dLon = (lon2 - lon1) * math.pi / 180.0;
@@ -73,19 +72,9 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
         });
       }
     }
-    final hasConnection = await _connectivityService.hasInternetConnection();
-    if (!hasConnection) {
-      if (mounted) {
-        setState(() {
-          _error = 'No internet connection';
-          _isLoading = false;
-        });
-      }
-      return;
-    }
-
     try {
-      final positions = await _issService.fetchInitialPositions();
+      final positionsResult = await _issService.fetchInitialPositions();
+      final positions = positionsResult.data;
       if (mounted && positions.isNotEmpty) {
         final pos = positions.last;
         final pastPos = positions.first;
@@ -95,6 +84,8 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
             _issHeading = _calculateBearing(pastPos.latitude, pastPos.longitude, pos.latitude, pos.longitude);
           }
           _issPosition = pos;
+          _isOffline = positionsResult.isOffline;
+          _isReconnecting = _isOffline;
           _isLoading = false;
         });
         
@@ -112,23 +103,17 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
   }
 
   Future<void> _pollPosition() async {
-    final hasConnection = await _connectivityService.hasInternetConnection();
-    if (!hasConnection) {
-      if (mounted && !_isReconnecting) {
-        setState(() => _isReconnecting = true);
-      }
-      return;
-    }
-
     try {
-      final pos = await _issService.fetchIssPosition();
+      final posResult = await _issService.fetchIssPosition();
+      final pos = posResult.data;
       if (mounted) {
         setState(() {
           if (_issPosition != null) {
             _issHeading = _calculateBearing(_issPosition!.latitude, _issPosition!.longitude, pos.latitude, pos.longitude);
           }
           _issPosition = pos;
-          _isReconnecting = false;
+          _isOffline = posResult.isOffline;
+          _isReconnecting = _isOffline;
         });
         
         // Smoothly recenter map
@@ -460,6 +445,31 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
           NexusUniversalHeader(
             onBack: () => Navigator.of(context).pop(),
             actions: [
+              if (_isOffline)
+                Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE11D48).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE11D48).withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.cloud_off, color: Color(0xFFE11D48), size: 12),
+                      SizedBox(width: 4),
+                      Text(
+                        'OFFLINE',
+                        style: TextStyle(
+                          color: Color(0xFFE11D48),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               TactileGlassButton(
                 icon: Icons.my_location,
                 onTap: () {

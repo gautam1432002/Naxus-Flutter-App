@@ -10,12 +10,12 @@ import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 import '../models/air_quality_model.dart';
 import '../models/weather_model.dart';
 import '../models/location_model.dart';
+import '../models/data_result.dart';
 
 import '../services/air_quality_service.dart';
 import '../services/weather_service.dart';
 import '../services/geocoding_service.dart';
 import '../services/location_storage_service.dart';
-import '../services/connectivity_service.dart';
 
 import '../widgets/skeleton_loader.dart';
 import '../widgets/error_state.dart';
@@ -37,7 +37,6 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
   final AirQualityService _airQualityService = AirQualityService();
   final WeatherService _weatherService = WeatherService();
   final LocationStorageService _locationStorageService = LocationStorageService();
-  final ConnectivityService _connectivityService = ConnectivityService();
 
   LocationModel? _currentLocation;
   List<LocationModel> _savedLocations = [];
@@ -45,6 +44,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
   AirQualityModel? _airQuality;
   WeatherModel? _weather;
   bool _isLoading = true;
+  bool _isOffline = false;
   String? _error;
   ActiveDashboardCard _activeCard = ActiveDashboardCard.aqi;
 
@@ -107,17 +107,6 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
       });
     }
 
-    final hasConnection = await _connectivityService.hasInternetConnection();
-    if (!hasConnection) {
-      if (mounted) {
-        setState(() {
-          _error = 'No internet connection';
-          _isLoading = false;
-        });
-      }
-      return;
-    }
-
     try {
       final results = await Future.wait([
         _weatherService.fetchWeather(_currentLocation!.latitude, _currentLocation!.longitude),
@@ -126,8 +115,12 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
 
       if (mounted) {
         setState(() {
-          _weather = results[0] as WeatherModel;
-          _airQuality = results[1] as AirQualityModel;
+          final weatherResult = results[0] as DataResult<WeatherModel>;
+          final aqiResult = results[1] as DataResult<AirQualityModel>;
+          
+          _weather = weatherResult.data;
+          _airQuality = aqiResult.data;
+          _isOffline = weatherResult.isOffline || aqiResult.isOffline;
           _isLoading = false;
         });
       }
@@ -944,6 +937,31 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
           NexusUniversalHeader(
             onBack: () => Navigator.of(context).pop(),
             actions: [
+              if (_isOffline)
+                Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE11D48).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE11D48).withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.cloud_off, color: Color(0xFFE11D48), size: 12),
+                      SizedBox(width: 4),
+                      Text(
+                        'OFFLINE',
+                        style: TextStyle(
+                          color: Color(0xFFE11D48),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               if (_currentLocation != null)
                 TactileGlassButton(
                   icon: Icons.star_border,

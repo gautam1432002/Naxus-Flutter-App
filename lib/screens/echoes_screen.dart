@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 import '../models/history_event_model.dart';
 import '../services/wiki_service.dart';
-import '../services/connectivity_service.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/error_state.dart';
 import '../widgets/tactile_glass_button.dart';
@@ -21,9 +20,9 @@ class EchoesScreen extends StatefulWidget {
 
 class _EchoesScreenState extends State<EchoesScreen> {
   final WikiService _wikiService = WikiService();
-  final ConnectivityService _connectivityService = ConnectivityService();
   List<HistoryEventModel>? _events;
   bool _isLoading = true;
+  bool _isOffline = false;
   String? _error;
   int? _expandedIndex;
 
@@ -50,23 +49,13 @@ class _EchoesScreenState extends State<EchoesScreen> {
       });
     }
 
-    final hasConnection = await _connectivityService.hasInternetConnection();
-    if (!hasConnection) {
-      if (mounted) {
-        setState(() {
-          _error = 'No internet connection';
-          _isLoading = false;
-        });
-      }
-      return;
-    }
-
     try {
-      final events = await _wikiService.fetchOnThisDayEvents();
-      store.historyEvents = events; // Manage data properly in the store
+      final eventsResult = await _wikiService.fetchOnThisDayEvents();
+      store.historyEvents = eventsResult.data; // Manage data properly in the store
       if (mounted) {
         setState(() {
-          _events = events;
+          _events = eventsResult.data;
+          _isOffline = eventsResult.isOffline;
           _isLoading = false;
         });
       }
@@ -267,13 +256,42 @@ class _EchoesScreenState extends State<EchoesScreen> {
           ),
           ),
           
-          // Floating Header (Universal)
+          // Universal Header Layer
           NexusUniversalHeader(
             onBack: () => Navigator.of(context).pop(),
             actions: [
+              if (_isOffline)
+                Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE11D48).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE11D48).withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.cloud_off, color: Color(0xFFE11D48), size: 12),
+                      SizedBox(width: 4),
+                      Text(
+                        'OFFLINE',
+                        style: TextStyle(
+                          color: Color(0xFFE11D48),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               TactileGlassButton(
-                icon: Icons.refresh,
-                onTap: _loadEvents,
+                icon: Icons.calendar_today,
+                onTap: () {
+                  HapticFeedback.lightImpact();
+                  // For now just refresh
+                  _loadEvents();
+                },
               ),
             ],
           ),
@@ -424,6 +442,7 @@ class _ChronoSpineRow extends StatelessWidget {
                                       borderRadius: BorderRadius.circular(8),
                                       child: Image.network(
                                         event.pageThumbnailUrl!,
+                                        cacheWidth: 1080,
                                         width: 60,
                                         height: 60,
                                         fit: BoxFit.cover,
@@ -440,6 +459,7 @@ class _ChronoSpineRow extends StatelessWidget {
                                     borderRadius: BorderRadius.circular(16),
                                     child: Image.network(
                                       event.pageThumbnailUrl!,
+                                      cacheWidth: 1080,
                                       width: double.infinity,
                                       fit: BoxFit.fitWidth,
                                       errorBuilder: (context, error, stackTrace) => const SizedBox(),

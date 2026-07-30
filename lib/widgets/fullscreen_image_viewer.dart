@@ -26,6 +26,7 @@ class FullscreenImageViewer extends StatelessWidget {
               tag: heroTag,
               child: Image.network(
                 imageUrl,
+                cacheWidth: 1080,
                 fit: BoxFit.contain,
               ),
             ),

@@ -5,6 +5,7 @@ import '../models/iss_model.dart';
 import '../models/air_quality_model.dart';
 import '../models/weather_model.dart';
 import '../models/history_event_model.dart';
+import '../models/data_result.dart';
 
 import 'nasa_service.dart';
 import 'iss_service.dart';
@@ -42,7 +43,8 @@ class AppDataStore {
     // 1. Fetch Location independent data
     final Future<void> fetchNasa = () async {
       try {
-        todayApod = await nasaService.fetchApod();
+        final res = await nasaService.fetchApod();
+        todayApod = res.data;
       } catch (e) {
         // Silently ignore prefetch failures
       }
@@ -50,7 +52,8 @@ class AppDataStore {
 
     final Future<void> fetchIss = () async {
       try {
-        issPosition = await issService.fetchIssPosition();
+        final res = await issService.fetchIssPosition();
+        issPosition = res.data;
       } catch (e) {
         // Silently ignore prefetch failures
       }
@@ -58,7 +61,8 @@ class AppDataStore {
 
     final Future<void> fetchWiki = () async {
       try {
-        historyEvents = await wikiService.fetchOnThisDayEvents();
+        final res = await wikiService.fetchOnThisDayEvents();
+        historyEvents = res.data;
       } catch (e) {
         // Silently ignore prefetch failures
       }
@@ -73,8 +77,8 @@ class AppDataStore {
             weatherService.fetchWeather(lastLoc.latitude, lastLoc.longitude),
             airQualityService.fetchAirQuality(lastLoc.latitude, lastLoc.longitude),
           ]);
-          weather = results[0] as WeatherModel;
-          airQuality = results[1] as AirQualityModel;
+          weather = (results[0] as DataResult<WeatherModel>).data;
+          airQuality = (results[1] as DataResult<AirQualityModel>).data;
         }
       } catch (e) {
         // Silently ignore prefetch failures

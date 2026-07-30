@@ -193,6 +193,7 @@ class ApodHeroCard extends StatelessWidget {
                         children: [
                           Image.network(
                             imageUrl,
+                            cacheWidth: 1080,
                             fit: BoxFit.cover,
                             frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
                               if (wasSynchronouslyLoaded) return child;

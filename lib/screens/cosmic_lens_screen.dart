@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/apod_model.dart';
 import '../services/nasa_service.dart';
-import '../services/connectivity_service.dart';
+import '../models/data_result.dart';
 
 import '../theme/app_theme.dart';
 import '../widgets/skeleton_loader.dart';
@@ -25,11 +25,11 @@ class CosmicLensScreen extends StatefulWidget {
 
 class _CosmicLensScreenState extends State<CosmicLensScreen> {
   final NasaService _nasaService = NasaService();
-  final ConnectivityService _connectivityService = ConnectivityService();
   
   ApodModel? _todayApod;
   List<ApodModel> _previousApods = [];
   bool _isLoading = true;
+  bool _isOffline = false;
   String? _error;
   bool _isFavorite = false;
 
@@ -55,17 +55,6 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
       });
     }
 
-    final hasConnection = await _connectivityService.hasInternetConnection();
-    if (!hasConnection) {
-      if (mounted) {
-        setState(() {
-          _error = 'No internet connection';
-          _isLoading = false;
-        });
-      }
-      return;
-    }
-
     try {
       final results = await Future.wait([
         _nasaService.fetchApod(),
@@ -74,12 +63,16 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
 
       if (mounted) {
         setState(() {
-          _todayApod = results[0] as ApodModel;
+          final todayResult = results[0] as DataResult<ApodModel>;
+          final rangeResult = results[1] as DataResult<List<ApodModel>>;
+          
+          _todayApod = todayResult.data;
           
           // Filter out today's APOD in case of timezone overlap
-          final allPrevious = results[1] as List<ApodModel>;
+          final allPrevious = rangeResult.data;
           _previousApods = allPrevious.where((a) => a.date != _todayApod!.date).toList();
           
+          _isOffline = todayResult.isOffline || rangeResult.isOffline;
           _isLoading = false;
         });
       }
@@ -126,6 +119,7 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
                         borderRadius: BorderRadius.circular(16.0),
                         child: Image.network(
                           apod.youtubeThumbnail ?? 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop',
+                          cacheWidth: 1080,
                           fit: BoxFit.cover,
                         ),
                       ),
@@ -153,6 +147,7 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
                           borderRadius: BorderRadius.circular(16.0),
                           child: Image.network(
                             apod.url,
+                            cacheWidth: 1080,
                             fit: BoxFit.cover,
                             frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
                               if (wasSynchronouslyLoaded) return child;
@@ -377,6 +372,31 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
           NexusUniversalHeader(
             onBack: () => Navigator.of(context).pop(),
             actions: [
+              if (_isOffline)
+                Container(
+                  margin: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFE11D48).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: const Color(0xFFE11D48).withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.cloud_off, color: Color(0xFFE11D48), size: 12),
+                      SizedBox(width: 4),
+                      Text(
+                        'OFFLINE',
+                        style: TextStyle(
+                          color: Color(0xFFE11D48),
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               TactileGlassButton(
                 icon: _isFavorite ? Icons.favorite : Icons.favorite_border,
                 iconColor: _isFavorite ? accentColor : Colors.white,

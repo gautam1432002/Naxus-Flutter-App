@@ -1,10 +1,11 @@
 import '../models/history_event_model.dart';
+import '../models/data_result.dart';
 import 'api_client.dart';
 
 class WikiService {
   final ApiClient _apiClient = ApiClient();
 
-  Future<List<HistoryEventModel>> fetchOnThisDayEvents() async {
+  Future<DataResult<List<HistoryEventModel>>> fetchOnThisDayEvents() async {
     final now = DateTime.now();
     final month = now.month.toString().padLeft(2, '0');
     final day = now.day.toString().padLeft(2, '0');
@@ -17,8 +18,11 @@ class WikiService {
     );
     
     final eventsJson = response.data['events'] as List?;
-    if (eventsJson == null) return [];
+    if (eventsJson == null) return DataResult([], isOffline: response.isStale);
 
-    return eventsJson.map((e) => HistoryEventModel.fromJson(e)).toList();
+    return DataResult(
+      eventsJson.map((e) => HistoryEventModel.fromJson(e)).toList(),
+      isOffline: response.isStale,
+    );
   }
 }

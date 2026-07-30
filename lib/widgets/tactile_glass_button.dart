@@ -73,25 +73,3 @@ class _TactileGlassButtonState extends State<TactileGlassButton> {
   }
 }
 
-/// Paints a specular gradient rim border on a circle.
-class _GradientRimPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    final paint = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          Color.fromRGBO(255, 255, 255, 0.40),
-          Color.fromRGBO(255, 255, 255, 0.10),
-        ],
-      ).createShader(rect)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-    canvas.drawOval(rect.deflate(0.5), paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
