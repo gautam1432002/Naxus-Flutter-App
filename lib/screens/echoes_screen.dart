@@ -42,6 +42,7 @@ class _EchoesScreenState extends State<EchoesScreen> {
           _isLoading = false;
         });
       }
+      return; // Do not refetch if we already have it
     } else {
       setState(() {
         _isLoading = true;
@@ -62,6 +63,7 @@ class _EchoesScreenState extends State<EchoesScreen> {
 
     try {
       final events = await _wikiService.fetchOnThisDayEvents();
+      store.historyEvents = events; // Manage data properly in the store
       if (mounted) {
         setState(() {
           _events = events;
@@ -127,8 +129,9 @@ class _EchoesScreenState extends State<EchoesScreen> {
           ),
           
           // Main Scroll View
-          CustomScrollView(
-            slivers: [
+          AnimationLimiter(
+            child: CustomScrollView(
+              slivers: [
               SliverToBoxAdapter(
                 child: Padding(
                   padding: const EdgeInsets.only(left: 24.0, right: 24.0, top: 80.0, bottom: 16.0),
@@ -259,8 +262,9 @@ class _EchoesScreenState extends State<EchoesScreen> {
                       childCount: _events!.length,
                     ),
                   ),
-                ),
+                )
             ],
+          ),
           ),
           
           // Floating Header (Universal)
@@ -437,8 +441,7 @@ class _ChronoSpineRow extends StatelessWidget {
                                     child: Image.network(
                                       event.pageThumbnailUrl!,
                                       width: double.infinity,
-                                      height: 160,
-                                      fit: BoxFit.cover,
+                                      fit: BoxFit.fitWidth,
                                       errorBuilder: (context, error, stackTrace) => const SizedBox(),
                                     ),
                                   ),
