@@ -73,8 +73,9 @@ class CarouselCard extends StatelessWidget {
             ),
           ),
           // Main Liquid Glass Card
-          ClipRRect(
-            borderRadius: BorderRadius.circular(32),
+          RepaintBoundary(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(32),
             child: BackdropFilter(
               filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
               child: Container(
@@ -211,8 +212,9 @@ class CarouselCard extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(18),
+                              RepaintBoundary(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(18),
                                 child: BackdropFilter(
                                   filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                                   child: Container(
@@ -230,8 +232,9 @@ class CarouselCard extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(40),
+                              RepaintBoundary(
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(40),
                                 child: BackdropFilter(
                                   filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                                   child: Container(
@@ -325,8 +328,9 @@ class CarouselCard extends StatelessWidget {
                                     ],
                                   ),
                                 ),
-                                ClipRRect(
-                                  borderRadius: BorderRadius.circular(40),
+                                RepaintBoundary(
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(40),
                                   child: BackdropFilter(
                                     filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                                     child: Container(
