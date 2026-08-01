@@ -187,7 +187,7 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
       child: ClipRRect(
         borderRadius: BorderRadius.circular(24),
         child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+          filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
@@ -393,7 +393,7 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(36),
                                     child: BackdropFilter(
-                                      filter: ui.ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                                      filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                                       child: _isLoading 
                                           ? const SkeletonLoader(width: double.infinity, height: double.infinity)
                                           : _error != null && _issPosition == null

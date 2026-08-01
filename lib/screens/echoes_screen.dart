@@ -410,7 +410,7 @@ class _ChronoSpineRow extends StatelessWidget {
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(28),
                     child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                       child: AnimatedSize(
                         duration: const Duration(milliseconds: 350),
                         curve: Curves.easeInOutCubic,

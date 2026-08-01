@@ -54,7 +54,7 @@ class ApodHeroCard extends StatelessWidget {
             return ClipRRect(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
                 child: Container(
                   decoration: BoxDecoration(
                     color: const Color(0xFF0F172A).withValues(alpha: 0.12),
@@ -146,7 +146,7 @@ class ApodHeroCard extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(26.5),
         child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
           child: Stack(
           children: [
             // Image / Video Content

@@ -51,11 +51,11 @@ class _FrostedBackButtonState extends State<FrostedBackButton> {
           curve: Curves.easeOutCubic,
           child: ClipOval(
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
               child: Container(
                 width: 44,
                 height: 44,
-                color: Colors.black.withValues(alpha: 0.10),
+                color: Colors.white.withValues(alpha: 0.20),
                 alignment: Alignment.center,
                 child: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
               ),

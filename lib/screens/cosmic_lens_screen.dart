@@ -110,7 +110,7 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [

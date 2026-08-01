@@ -73,11 +73,10 @@ class CarouselCard extends StatelessWidget {
             ),
           ),
           // Main Liquid Glass Card
-          RepaintBoundary(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(32),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(32),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
+              filter: ImageFilter.blur(sigmaX: 12 * activeFocus, sigmaY: 12 * activeFocus),
               child: Container(
                 width: double.infinity,
                 height: double.infinity,
@@ -212,11 +211,10 @@ class CarouselCard extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              RepaintBoundary(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(18),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(18),
                                 child: BackdropFilter(
-                                  filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                                  filter: ImageFilter.blur(sigmaX: 6 * activeFocus, sigmaY: 6 * activeFocus),
                                   child: Container(
                                     width: 60,
                                     height: 60,
@@ -232,11 +230,10 @@ class CarouselCard extends StatelessWidget {
                                   ),
                                 ),
                               ),
-                              RepaintBoundary(
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(40),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(40),
                                 child: BackdropFilter(
-                                  filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                                  filter: ImageFilter.blur(sigmaX: 6 * activeFocus, sigmaY: 6 * activeFocus),
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
                                     decoration: BoxDecoration(
@@ -328,11 +325,10 @@ class CarouselCard extends StatelessWidget {
                                     ],
                                   ),
                                 ),
-                                RepaintBoundary(
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(40),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(40),
                                   child: BackdropFilter(
-                                    filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                                    filter: ImageFilter.blur(sigmaX: 6 * activeFocus, sigmaY: 6 * activeFocus),
                                     child: Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 5),
                                       decoration: BoxDecoration(

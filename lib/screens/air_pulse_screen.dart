@@ -190,7 +190,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
           child: ClipRRect(
             borderRadius: BorderRadius.circular(32),
             child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
                 child: Column(
@@ -349,7 +349,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(24),
               child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   child: Column(
@@ -409,7 +409,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(24),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
@@ -497,7 +497,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(28),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Row(
@@ -594,7 +594,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(28),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
               child: RepaintBoundary(
@@ -1030,7 +1030,7 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
     return ClipRRect(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
         child: Container(
           height: MediaQuery.of(context).size.height * 0.85,
           decoration: BoxDecoration(
@@ -1063,7 +1063,7 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
                 ClipRRect(
                   borderRadius: BorderRadius.circular(24),
                   child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                     child: Container(
                       decoration: BoxDecoration(
                         color: Colors.white.withValues(alpha: 0.05),
@@ -1110,7 +1110,7 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
                         return ClipRRect(
                           borderRadius: BorderRadius.circular(24),
                           child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
                             child: Container(
                               decoration: BoxDecoration(
                                 color: Colors.white.withValues(alpha: 0.05),
