@@ -23,6 +23,10 @@ import '../widgets/tactile_glass_button.dart';
 import '../widgets/nexus_universal_header.dart';
 import '../widgets/weather_illustration.dart';
 import '../services/app_data_store.dart';
+import '../widgets/animated_number_counter.dart';
+import '../widgets/interactive_3d_card.dart';
+import '../widgets/weather_particle_system.dart';
+import '../widgets/breathing_aqi_ring.dart';
 
 enum ActiveDashboardCard { weather, aqi }
 
@@ -336,8 +340,8 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
           child: Container(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(24),
-              color: Colors.white.withValues(alpha: 0.45),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.65), width: 1.2),
+              color: Colors.white.withValues(alpha: 0.20),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.30), width: 1.0),
               boxShadow: [
                 BoxShadow(
                   color: const Color(0xFF0F172A).withValues(alpha: 0.05),
@@ -396,8 +400,8 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(24),
-          color: Colors.white.withValues(alpha: 0.45),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.65), width: 1.2),
+          color: Colors.white.withValues(alpha: 0.20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.30), width: 1.0),
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF0F172A).withValues(alpha: 0.05),
@@ -474,18 +478,19 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
           setState(() => _activeCard = ActiveDashboardCard.weather);
         }
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 400),
+      child: Interactive3DCard(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 400),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(28),
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: isActive 
-              ? [Colors.white.withValues(alpha: 0.55), Colors.white.withValues(alpha: 0.35)]
-              : [Colors.white.withValues(alpha: 0.30), Colors.white.withValues(alpha: 0.15)],
+              ? [Colors.white.withValues(alpha: 0.35), Colors.white.withValues(alpha: 0.15)]
+              : [Colors.white.withValues(alpha: 0.20), Colors.white.withValues(alpha: 0.05)],
           ),
-          border: Border.all(color: Colors.white.withValues(alpha: isActive ? 0.75 : 0.40), width: 1.2),
+          border: Border.all(color: Colors.white.withValues(alpha: isActive ? 0.40 : 0.20), width: 1.0),
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF0F172A).withValues(alpha: isActive ? 0.08 : 0.03),
@@ -507,8 +512,10 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          '${_weather!.temperature.toStringAsFixed(0)}°',
+                        AnimatedNumberCounter(
+                          value: _weather!.temperature,
+                          fractionDigits: 0,
+                          suffix: '°',
                           style: const TextStyle(
                             color: Color(0xFF0F172A),
                             fontSize: 48,
@@ -518,8 +525,11 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
                           ),
                         ),
                         const SizedBox(height: 8),
-                        Text(
-                          'Feels like ${_weather!.feelsLike.toStringAsFixed(0)}°',
+                        AnimatedNumberCounter(
+                          value: _weather!.feelsLike,
+                          fractionDigits: 0,
+                          prefix: 'Feels like ',
+                          suffix: '°',
                           style: const TextStyle(
                             color: Color(0xFF64748B),
                             fontSize: 14,
@@ -558,6 +568,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
           ),
         ),
       ),
+      ),
     );
   }
 
@@ -571,18 +582,19 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
           setState(() => _activeCard = ActiveDashboardCard.aqi);
         }
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 400),
+      child: Interactive3DCard(
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 400),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(28),
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: isActive 
-              ? [Colors.white.withValues(alpha: 0.55), Colors.white.withValues(alpha: 0.35)]
-              : [Colors.white.withValues(alpha: 0.30), Colors.white.withValues(alpha: 0.15)],
+              ? [Colors.white.withValues(alpha: 0.35), Colors.white.withValues(alpha: 0.15)]
+              : [Colors.white.withValues(alpha: 0.20), Colors.white.withValues(alpha: 0.05)],
           ),
-          border: Border.all(color: Colors.white.withValues(alpha: isActive ? 0.75 : 0.40), width: 1.2),
+          border: Border.all(color: Colors.white.withValues(alpha: isActive ? 0.40 : 0.20), width: 1.0),
           boxShadow: [
             BoxShadow(
               color: const Color(0xFF0F172A).withValues(alpha: isActive ? 0.08 : 0.03),
@@ -615,18 +627,22 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
                         child: Stack(
                           alignment: Alignment.center,
                           children: [
-                            CustomPaint(
-                              size: const Size(110, 110),
-                              painter: AqiGaugePainter(
-                                value: normalizedValue,
-                                activeColor: activeColor,
+                            BreathingAqiRing(
+                              aqiVal: _airQuality!.europeanAqi,
+                              child: CustomPaint(
+                                size: const Size(110, 110),
+                                painter: AqiGaugePainter(
+                                  value: normalizedValue,
+                                  activeColor: activeColor,
+                                ),
                               ),
                             ),
                             Column(
                               mainAxisSize: MainAxisSize.min,
                               children: [
-                                Text(
-                                  aqiVal.toInt().toString(),
+                                AnimatedNumberCounter(
+                                  value: aqiVal,
+                                  fractionDigits: 0,
                                   style: const TextStyle(
                                     color: Color(0xFF0F172A),
                                     fontSize: 32,
@@ -666,6 +682,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
             ),
           ),
         ),
+      ),
       ),
     );
   }
@@ -833,6 +850,13 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
               activeCard: _activeCard,
             ),
           ),
+          
+          if (_weather != null)
+            Positioned.fill(
+              child: WeatherParticleSystem(
+                conditionLabel: _weather!.conditionLabel,
+              ),
+            ),
           
           // Layer 1: Scrollable Content
           CustomScrollView(
@@ -1287,195 +1311,166 @@ class AtmosphericBackgroundPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // 1. Base color interpolation
-    final baseAqi = const Color(0xFFF1F5F9);
-    final isDarkWeather = weather?.conditionLabel.toLowerCase().contains('rain') == true || 
-                          weather?.conditionLabel.toLowerCase().contains('snow') == true;
-    final baseWeather = isDarkWeather ? const Color(0xFFE2E8F0) : const Color(0xFFF1F5F9);
-    final baseColor = Color.lerp(baseAqi, baseWeather, transition)!;
-    canvas.drawColor(baseColor, BlendMode.srcOver);
-
-    // 2. Static Background Elements (Rich, slightly saturated)
-    _drawStaticDecorations(canvas, size);
-
-    // 3. Morphing Ambient AQI -> Weather Elements
-    Color c1 = const Color(0xFF10B981); // AQI Green
-    Color c2 = const Color(0xFF3B82F6); // AQI Blue
-    if (aqi != null) {
-      final aqiVal = aqi!.europeanAqi;
-      if (aqiVal > 66) { c1 = const Color(0xFFEF4444); c2 = const Color(0xFFF97316); }
-      else if (aqiVal > 33) { c1 = const Color(0xFFEAB308); c2 = const Color(0xFFF97316); }
+    // 1. Time-of-Day Solar Gradients for Weather Mode
+    final now = DateTime.now();
+    final hour = now.hour + now.minute / 60.0;
+    
+    Color topWeatherColor = const Color(0xFF38BDF8); // Day blue
+    Color bottomWeatherColor = const Color(0xFFF1F5F9); // Day light
+    
+    if (hour >= 18 || hour < 5) {
+      // Night / Dusk
+      topWeatherColor = const Color(0xFF0F172A);
+      bottomWeatherColor = const Color(0xFF1E293B);
+    } else if (hour >= 16 && hour < 18) {
+      // Sunset
+      topWeatherColor = const Color(0xFFF59E0B);
+      bottomWeatherColor = const Color(0xFFEF4444);
+    } else if (hour >= 5 && hour < 8) {
+      // Sunrise
+      topWeatherColor = const Color(0xFFFCD34D);
+      bottomWeatherColor = const Color(0xFFF472B6);
     }
 
-    final aqiTopLeft = const Offset(-50, -50);
-    final aqiTopLeftRadius = 250.0;
-    
-    final aqiBottomRight = Offset(size.width - 50, size.height - 150);
-    final aqiBottomRightRadius = 300.0;
+    // Base color for AQI Mode
+    Color aqiTopColor = const Color(0xFF0F172A);
+    Color aqiBottomColor = const Color(0xFF1E293B);
 
-    String cond = weather?.conditionLabel.toLowerCase() ?? 'clear';
-    bool isCloudy = cond.contains('cloud');
-    bool isRain = cond.contains('rain') || cond.contains('drizzle') || cond.contains('thunder');
-    bool isSnow = cond.contains('snow');
-    bool isClear = !isCloudy && !isRain && !isSnow;
+    final topColor = Color.lerp(aqiTopColor, topWeatherColor, transition)!;
+    final bottomColor = Color.lerp(aqiBottomColor, bottomWeatherColor, transition)!;
 
-    if (isClear) {
-      // Morph Top-Left AQI -> Sun in Top-Right
-      final sunCenter = Offset.lerp(aqiTopLeft, Offset(size.width - 60, 180), transition)!;
-      final sunRadius = ui.lerpDouble(aqiTopLeftRadius, 140.0, transition)!;
+    final bgPaint = Paint()
+      ..shader = ui.Gradient.linear(
+        Offset.zero, 
+        Offset(0, size.height), 
+        [topColor, bottomColor]
+      );
+    canvas.drawRect(Offset.zero & size, bgPaint);
+
+    // --- AQI Aurora Effect ---
+    if (transition < 1.0) {
+      final aqiVal = aqi?.europeanAqi ?? 0;
+      Color auroraC1 = const Color(0xFF10B981); // Green
+      Color auroraC2 = const Color(0xFF3B82F6); // Blue
       
-      final sunGlow = Paint()
-        ..shader = ui.Gradient.radial(sunCenter, sunRadius * 1.5, [
-          Color.lerp(c1.withValues(alpha: 0.15), const Color(0xFFFDE047).withValues(alpha: 0.4), transition)!,
-          Color.lerp(c1.withValues(alpha: 0.0), const Color(0xFFF59E0B).withValues(alpha: 0.0), transition)!,
-        ]);
-      canvas.drawCircle(sunCenter, sunRadius * 1.5, sunGlow);
-      
-      if (transition > 0) {
-        final sunBody = Paint()
-          ..shader = ui.Gradient.linear(
-            Offset(sunCenter.dx, sunCenter.dy - sunRadius),
-            Offset(sunCenter.dx, sunCenter.dy + sunRadius),
-            [
-              Color.lerp(c1.withValues(alpha: 0.0), const Color(0xFFFEF08A), transition)!,
-              Color.lerp(c1.withValues(alpha: 0.0), const Color(0xFFF59E0B), transition)!,
-            ]
-          );
-        canvas.drawCircle(sunCenter, sunRadius * transition, sunBody);
-        
-        // Rotating rays
-        final rayPaint = Paint()
-          ..shader = ui.Gradient.linear(
-            Offset.zero, Offset(0, sunRadius + 40),
-            [
-               const Color(0xFFFDE047).withValues(alpha: 0.5 * transition),
-               const Color(0xFFF59E0B).withValues(alpha: 0.0),
-            ]
-          )
-          ..strokeWidth = 8 * transition
-          ..strokeCap = StrokeCap.round;
-
-        canvas.save();
-        canvas.translate(sunCenter.dx, sunCenter.dy);
-        canvas.rotate(time * math.pi * 4); // Slow rotation
-        for (int i=0; i<8; i++) {
-           canvas.save();
-           canvas.rotate(i * math.pi / 4);
-           canvas.drawLine(Offset(0, sunRadius + 10), Offset(0, sunRadius + 60 + math.sin(time * math.pi * 20)*10), rayPaint);
-           canvas.restore();
-        }
-        canvas.restore();
+      if (aqiVal > 66) { 
+        auroraC1 = const Color(0xFFEF4444); 
+        auroraC2 = const Color(0xFFF97316); 
+      } else if (aqiVal > 33) { 
+        auroraC1 = const Color(0xFFEAB308); 
+        auroraC2 = const Color(0xFFF97316); 
       }
 
-      // Morph Bottom-Right AQI -> Soft foreground cloud
-      final cloudCenter = Offset.lerp(aqiBottomRight, Offset(180, size.height - 300), transition)!;
-      final cloudW = ui.lerpDouble(aqiBottomRightRadius * 2, 600, transition)!;
-      final cloudColor = Color.lerp(c2.withValues(alpha: 0.15), Colors.white.withValues(alpha: 0.7), transition)!;
-      
-      _drawStylizedCloud(canvas, cloudCenter, cloudW, cloudColor, transition);
-
-    } else if (isCloudy) {
-       // Cloud morphing
-       final cloud1Center = Offset.lerp(aqiTopLeft, Offset(120, 150), transition)!;
-       final cloud1R = ui.lerpDouble(aqiTopLeftRadius, 180, transition)!;
-       final c1Color = Color.lerp(c1.withValues(alpha: 0.15), Colors.white.withValues(alpha: 0.9), transition)!;
-       _drawStylizedCloud(canvas, cloud1Center, cloud1R * 2, c1Color, transition);
-
-       final cloud2Center = Offset.lerp(aqiBottomRight, Offset(size.width - 150, 320), transition)!;
-       final cloud2R = ui.lerpDouble(aqiBottomRightRadius, 250, transition)!;
-       final c2Color = Color.lerp(c2.withValues(alpha: 0.15), const Color(0xFFE2E8F0).withValues(alpha: 0.8), transition)!;
-       _drawStylizedCloud(canvas, cloud2Center, cloud2R * 2, c2Color, transition);
-    } else if (isRain) {
-       // Rain morphing
-       final cloud1Center = Offset.lerp(aqiTopLeft, Offset(size.width/2, 100), transition)!;
-       final cloud1R = ui.lerpDouble(aqiTopLeftRadius, size.width * 0.45, transition)!;
-       final c1Color = Color.lerp(c1.withValues(alpha: 0.15), const Color(0xFF94A3B8).withValues(alpha: 0.8), transition)!;
-       _drawStylizedCloud(canvas, cloud1Center, cloud1R * 2, c1Color, transition);
-
-       final cloud2Center = Offset.lerp(aqiBottomRight, Offset(size.width - 100, 250), transition)!;
-       final cloud2R = ui.lerpDouble(aqiBottomRightRadius, 200, transition)!;
-       final c2Color = Color.lerp(c2.withValues(alpha: 0.15), const Color(0xFF64748B).withValues(alpha: 0.6), transition)!;
-       _drawStylizedCloud(canvas, cloud2Center, cloud2R * 2, c2Color, transition);
-       
-       // Large rain streaks and lightning removed per user request
-    } else {
-       // Snow morphing
-       final cloud1Center = Offset.lerp(aqiTopLeft, Offset(size.width/2, 150), transition)!;
-       final cloud1R = ui.lerpDouble(aqiTopLeftRadius, size.width * 0.5, transition)!;
-       final c1Color = Color.lerp(c1.withValues(alpha: 0.15), const Color(0xFFDBEAFE).withValues(alpha: 0.8), transition)!;
-       _drawStylizedCloud(canvas, cloud1Center, cloud1R * 2, c1Color, transition);
-
-       final cloud2Center = Offset.lerp(aqiBottomRight, Offset(size.width - 200, 350), transition)!;
-       final cloud2R = ui.lerpDouble(aqiBottomRightRadius, 250, transition)!;
-       final c2Color = Color.lerp(c2.withValues(alpha: 0.15), Colors.white.withValues(alpha: 0.7), transition)!;
-       _drawStylizedCloud(canvas, cloud2Center, cloud2R * 2, c2Color, transition);
+      final auroraOpacity = 1.0 - transition;
+      _drawAuroraMesh(canvas, size, time, auroraC1, auroraC2, auroraOpacity);
     }
+
+    // --- Weather Elements ---
+    if (transition > 0.0) {
+      String cond = weather?.conditionLabel.toLowerCase() ?? 'clear';
+      bool isCloudy = cond.contains('cloud');
+      bool isRain = cond.contains('rain') || cond.contains('drizzle') || cond.contains('thunder');
+      bool isSnow = cond.contains('snow');
+      bool isClear = !isCloudy && !isRain && !isSnow;
+
+      if (isClear) {
+        _drawGodRays(canvas, size, time, transition);
+      } else if (isCloudy || isRain || isSnow) {
+        _drawVolumetricClouds(canvas, size, time, transition, isRain ? Colors.grey : Colors.white);
+      }
+    }
+
+    // Vignette Overlay
+    final vignette = Paint()
+      ..shader = ui.Gradient.radial(
+        Offset(size.width / 2, size.height / 2),
+        size.height * 0.8,
+        [Colors.transparent, Colors.black.withValues(alpha: 0.4)],
+        [0.4, 1.0],
+      )
+      ..blendMode = BlendMode.multiply;
+    canvas.drawRect(Offset.zero & size, vignette);
   }
 
-  void _drawStylizedCloud(Canvas canvas, Offset center, double width, Color color, double transition) {
-     final floatOffset = math.sin(time * math.pi * 10) * 8 * transition;
-     final c = Offset(center.dx, center.dy + floatOffset);
-
-     final r1 = ui.lerpDouble(width/2, width * 0.28, transition)!;
-     final r2 = ui.lerpDouble(width/2, width * 0.40, transition)!;
-     final r3 = ui.lerpDouble(width/2, width * 0.22, transition)!;
-
-     final d1 = Offset.lerp(Offset.zero, Offset(-width * 0.25, 20), transition)!;
-     final d2 = Offset.lerp(Offset.zero, Offset.zero, transition)!;
-     final d3 = Offset.lerp(Offset.zero, Offset(width * 0.30, 30), transition)!;
-
-     if (transition > 0) {
-       final shadow = Paint()
-         ..color = Colors.black.withValues(alpha: 0.12 * transition)
-         ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 25);
-       canvas.drawCircle(c + d1, r1, shadow);
-       canvas.drawCircle(c + d2, r2, shadow);
-       canvas.drawCircle(c + d3, r3, shadow);
-     }
-
-     final paint = Paint()..color = color;
-     canvas.drawCircle(c + d1, r1, paint);
-     canvas.drawCircle(c + d2, r2, paint);
-     canvas.drawCircle(c + d3, r3, paint);
-
-     if (transition > 0) {
-       final highlight = Paint()
-         ..shader = ui.Gradient.linear(
-           Offset(c.dx, c.dy - width * 0.3),
-           Offset(c.dx, c.dy),
-           [
-             Colors.white.withValues(alpha: 0.6 * transition),
-             Colors.white.withValues(alpha: 0.0),
-           ]
-         );
-       canvas.drawCircle(c + d1, r1, highlight);
-       canvas.drawCircle(c + d2, r2, highlight);
-       canvas.drawCircle(c + d3, r3, highlight);
-     }
-  }
-
-  void _drawStaticDecorations(Canvas canvas, Size size) {
+  void _drawAuroraMesh(Canvas canvas, Size size, double t, Color c1, Color c2, double opacity) {
     final p1 = Paint()
-      ..color = const Color(0xFF60A5FA).withValues(alpha: 0.15)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(-60, size.height * 0.85), 200, p1);
-
+      ..color = c1.withValues(alpha: opacity * 0.4)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 100);
+    
     final p2 = Paint()
-      ..color = const Color(0xFF818CF8).withValues(alpha: 0.12)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(size.width + 80, size.height * 0.4), 180, p2);
+      ..color = c2.withValues(alpha: opacity * 0.4)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 120);
 
+    final x1 = size.width * 0.5 + math.sin(t * math.pi * 2) * size.width * 0.4;
+    final y1 = size.height * 0.3 + math.cos(t * math.pi * 1.5) * size.height * 0.25;
+    
+    final x2 = size.width * 0.5 + math.cos(t * math.pi * 2.2) * size.width * 0.4;
+    final y2 = size.height * 0.7 + math.sin(t * math.pi * 1.8) * size.height * 0.25;
+
+    canvas.drawCircle(Offset(x1, y1), 200, p1);
+    canvas.drawCircle(Offset(x2, y2), 250, p2);
+    
     final p3 = Paint()
-      ..color = const Color(0xFF38BDF8).withValues(alpha: 0.1)
-      ..style = PaintingStyle.fill;
-    canvas.drawCircle(Offset(size.width * 0.35, size.height * 0.6), 100, p3);
+      ..color = c1.withValues(alpha: opacity * 0.24)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 150);
+      
+    final x3 = size.width * 0.5 + math.sin(t * math.pi * 1.2) * size.width * 0.5;
+    final y3 = size.height * 0.5 + math.cos(t * math.pi * 2.5) * size.height * 0.35;
     
-    final linePaint = Paint()
-      ..color = const Color(0xFF94A3B8).withValues(alpha: 0.15)
-      ..strokeWidth = 1.0;
+    canvas.drawCircle(Offset(x3, y3), 300, p3);
+  }
+
+  void _drawGodRays(Canvas canvas, Size size, double t, double opacity) {
+    canvas.save();
+    canvas.translate(size.width * 0.8, size.height * 0.2); // Sun position
+
+    final rayPaint = Paint()
+      ..shader = ui.Gradient.linear(
+        Offset.zero, 
+        Offset(-size.width, size.height), 
+        [
+          Colors.white.withValues(alpha: 0.12 * opacity),
+          Colors.white.withValues(alpha: 0.0),
+        ]
+      )
+      ..blendMode = BlendMode.screen;
+
+    final rayCount = 5;
+    for (int i = 0; i < rayCount; i++) {
+      canvas.save();
+      double angle = (i * math.pi / 6) + (math.sin(t * math.pi * 2 + i) * 0.05);
+      canvas.rotate(angle);
+      
+      final path = Path()
+        ..moveTo(0, -30)
+        ..lineTo(-size.width * 1.5, size.height)
+        ..lineTo(-size.width * 1.1, size.height)
+        ..lineTo(0, 30)
+        ..close();
+        
+      canvas.drawPath(path, rayPaint);
+      canvas.restore();
+    }
+    canvas.restore();
+  }
+
+  void _drawVolumetricClouds(Canvas canvas, Size size, double t, double opacity, Color cloudColor) {
+    final p = Paint()
+      ..color = cloudColor.withValues(alpha: 0.08 * opacity)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 100);
+
+    final x1 = size.width * 0.2 + math.sin(t * math.pi) * 50;
+    final y1 = size.height * 0.15 + math.cos(t * math.pi * 0.8) * 30;
+
+    final x2 = size.width * 0.8 + math.cos(t * math.pi * 1.2) * 60;
+    final y2 = size.height * 0.25 + math.sin(t * math.pi * 1.5) * 40;
     
-    canvas.drawLine(Offset(0, size.height * 0.28), Offset(size.width, size.height * 0.18), linePaint);
-    canvas.drawLine(Offset(0, size.height * 0.32), Offset(size.width, size.height * 0.22), linePaint);
+    final x3 = size.width * 0.5 + math.sin(t * math.pi * 0.5) * 80;
+    final y3 = size.height * 0.05;
+
+    canvas.drawCircle(Offset(x1, y1), 220, p);
+    canvas.drawCircle(Offset(x2, y2), 260, p);
+    canvas.drawCircle(Offset(x3, y3), 300, p);
   }
 
   @override
