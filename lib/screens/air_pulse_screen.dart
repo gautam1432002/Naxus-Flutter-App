@@ -186,7 +186,9 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
         return Container(
           margin: const EdgeInsets.all(24),
           decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(32),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1.0),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.04),
@@ -197,9 +199,9 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
           ),
           child: GlassContainer(
             borderRadius: BorderRadius.circular(32),
-            blurSigma: 12.0,
-            overlayColor: Colors.white.withValues(alpha: 0.12),
-            borderColor: Colors.white.withValues(alpha: 0.15),
+            blurSigma: 8.0,
+            overlayColor: Colors.transparent,
+            borderColor: Colors.transparent,
             child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
                 child: Column(
@@ -341,43 +343,57 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
       child: SlideAnimation(
         verticalOffset: 30.0,
         child: FadeInAnimation(
-          child: GlassContainer(
-            borderRadius: BorderRadius.circular(24),
-            blurSigma: 12.0,
-            overlayColor: Colors.white.withValues(alpha: 0.08),
-            borderColor: Colors.white.withValues(alpha: 0.2),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Row(
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(24),
+              color: Colors.white.withValues(alpha: 0.20),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.30), width: 1.0),
+              boxShadow: [
+                BoxShadow(
+                  color: _primaryText.withValues(alpha: 0.05),
+                  blurRadius: 16,
+                  offset: const Offset(0, 6),
+                ),
+              ],
+            ),
+            child: GlassContainer(
+              borderRadius: BorderRadius.circular(24),
+              blurSigma: 8.0,
+              overlayColor: Colors.transparent,
+              borderColor: Colors.transparent,
+              child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(icon, color: accentColor.withValues(alpha: 0.8), size: 16),
-                      const SizedBox(width: 8),
+                      Row(
+                        children: [
+                          Icon(icon, color: accentColor.withValues(alpha: 0.8), size: 16),
+                          const SizedBox(width: 8),
+                          Text(
+                            title.toUpperCase(),
+                            style: TextStyle(
+                              color: _secondaryText,
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
                       Text(
-                        title.toUpperCase(),
+                        value,
                         style: TextStyle(
-                          color: _secondaryText,
-                          fontSize: 11,
+                          color: _primaryText,
                           fontWeight: FontWeight.w800,
-                          letterSpacing: 0.8,
+                          fontSize: 18,
                         ),
                       ),
                     ],
                   ),
-                  const Spacer(),
-                  Text(
-                    value,
-                    style: TextStyle(
-                      color: _primaryText,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 18,
-                    ),
-                  ),
-                ],
-              ),
+                ),
             ),
           ),
         ),
@@ -387,60 +403,74 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
 
   Widget _buildAqiSecondaryCard(String title, double value, String unit, IconData icon) {
     return Expanded(
-      child: GlassContainer(
-        borderRadius: BorderRadius.circular(24),
-        blurSigma: 12.0,
-        overlayColor: Colors.white.withValues(alpha: 0.08),
-        borderColor: Colors.white.withValues(alpha: 0.2),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          color: Colors.white.withValues(alpha: 0.20),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.30), width: 1.0),
+          boxShadow: [
+            BoxShadow(
+              color: _primaryText.withValues(alpha: 0.05),
+              blurRadius: 16,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: GlassContainer(
+          borderRadius: BorderRadius.circular(24),
+          blurSigma: 8.0,
+          overlayColor: Colors.transparent,
+          borderColor: Colors.transparent,
+          child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(icon, color: _secondaryText, size: 16),
-                  const SizedBox(width: 8),
-                  Text(
-                    title,
-                    style: TextStyle(
-                      color: _secondaryText,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 11,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    value.toStringAsFixed(1),
-                    style: TextStyle(
-                      color: _primaryText,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4.0),
-                    child: Text(
-                      unit,
-                      style: TextStyle(
-                        color: _primaryText.withValues(alpha: 0.5),
-                        fontSize: 12,
+                  Row(
+                    children: [
+                      Icon(icon, color: _secondaryText, size: 16),
+                      const SizedBox(width: 8),
+                      Text(
+                        title,
+                        style: TextStyle(
+                          color: _secondaryText,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 11,
+                          letterSpacing: 0.8,
+                        ),
                       ),
-                    ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        value.toStringAsFixed(1),
+                        style: TextStyle(
+                          color: _primaryText,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4.0),
+                        child: Text(
+                          unit,
+                          style: TextStyle(
+                            color: _primaryText.withValues(alpha: 0.5),
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ],
+            ),
           ),
         ),
-      ),
     );
   }
   
@@ -457,24 +487,30 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
       child: Interactive3DCard(
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 400),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: _primaryText.withValues(alpha: isActive ? 0.08 : 0.03),
-                blurRadius: isActive ? 24 : 12,
-                offset: const Offset(0, 8),
-              ),
-            ],
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isActive 
+              ? [Colors.white.withValues(alpha: 0.35), Colors.white.withValues(alpha: 0.15)]
+              : [Colors.white.withValues(alpha: 0.20), Colors.white.withValues(alpha: 0.05)],
           ),
-          child: GlassContainer(
-            borderRadius: BorderRadius.circular(28),
-            blurSigma: 16.0,
-            overlayColor: isActive 
-                ? Colors.white.withValues(alpha: 0.15)
-                : Colors.white.withValues(alpha: 0.05),
-            borderColor: Colors.white.withValues(alpha: isActive ? 0.40 : 0.20),
-            child: Padding(
+          border: Border.all(color: Colors.white.withValues(alpha: isActive ? 0.40 : 0.20), width: 1.0),
+          boxShadow: [
+            BoxShadow(
+              color: _primaryText.withValues(alpha: isActive ? 0.08 : 0.03),
+              blurRadius: isActive ? 24 : 12,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: GlassContainer(
+          borderRadius: BorderRadius.circular(28),
+          blurSigma: 8.0,
+          overlayColor: Colors.transparent,
+          borderColor: Colors.transparent,
+          child: Padding(
               padding: const EdgeInsets.all(24),
               child: Row(
                 children: [
@@ -535,9 +571,9 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
                   ),
                 ],
               ),
-            ),
           ),
         ),
+      ),
       ),
     );
   }
@@ -555,95 +591,101 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
       child: Interactive3DCard(
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 400),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(28),
-            boxShadow: [
-              BoxShadow(
-                color: _primaryText.withValues(alpha: isActive ? 0.08 : 0.03),
-                blurRadius: isActive ? 24 : 12,
-                offset: const Offset(0, 8),
-              ),
-            ],
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: isActive 
+              ? [Colors.white.withValues(alpha: 0.35), Colors.white.withValues(alpha: 0.15)]
+              : [Colors.white.withValues(alpha: 0.20), Colors.white.withValues(alpha: 0.05)],
           ),
-          child: GlassContainer(
-            borderRadius: BorderRadius.circular(28),
-            blurSigma: 16.0,
-            overlayColor: isActive 
-                ? Colors.white.withValues(alpha: 0.15)
-                : Colors.white.withValues(alpha: 0.05),
-            borderColor: Colors.white.withValues(alpha: isActive ? 0.40 : 0.20),
-            child: Padding(
+          border: Border.all(color: Colors.white.withValues(alpha: isActive ? 0.40 : 0.20), width: 1.0),
+          boxShadow: [
+            BoxShadow(
+              color: _primaryText.withValues(alpha: isActive ? 0.08 : 0.03),
+              blurRadius: isActive ? 24 : 12,
+              offset: const Offset(0, 8),
+            ),
+          ],
+        ),
+        child: GlassContainer(
+          borderRadius: BorderRadius.circular(28),
+          blurSigma: 8.0,
+          overlayColor: Colors.transparent,
+          borderColor: Colors.transparent,
+          child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
               child: RepaintBoundary(
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween<double>(begin: 0.0, end: _airQuality!.europeanAqi),
-                  duration: const Duration(milliseconds: 1200),
-                  curve: Curves.easeOutCubic,
-                  builder: (context, aqiVal, child) {
-                    final normalizedValue = math.min(aqiVal / 100.0, 1.0);
-                    final activeColor = _getAqiColor(aqiVal);
+              child: TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 0.0, end: _airQuality!.europeanAqi),
+                duration: const Duration(milliseconds: 1200),
+                curve: Curves.easeOutCubic,
+                builder: (context, aqiVal, child) {
+                  final normalizedValue = math.min(aqiVal / 100.0, 1.0);
+                  final activeColor = _getAqiColor(aqiVal);
 
-                    return Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          height: 110,
-                          width: 110,
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              BreathingAqiRing(
-                                aqiVal: _airQuality!.europeanAqi,
-                                child: CustomPaint(
-                                  size: const Size(110, 110),
-                                  painter: AqiGaugePainter(
-                                    value: normalizedValue,
-                                    activeColor: activeColor,
-                                  ),
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(
+                        height: 110,
+                        width: 110,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            BreathingAqiRing(
+                              aqiVal: _airQuality!.europeanAqi,
+                              child: CustomPaint(
+                                size: const Size(110, 110),
+                                painter: AqiGaugePainter(
+                                  value: normalizedValue,
+                                  activeColor: activeColor,
                                 ),
                               ),
-                              Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  AnimatedNumberCounter(
-                                    value: aqiVal,
-                                    fractionDigits: 0,
-                                    style: TextStyle(
-                                      color: _primaryText,
-                                      fontSize: 32,
-                                      fontWeight: FontWeight.w900,
-                                      letterSpacing: -1,
-                                    ),
+                            ),
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                AnimatedNumberCounter(
+                                  value: aqiVal,
+                                  fractionDigits: 0,
+                                  style: TextStyle(
+                                    color: _primaryText,
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -1,
                                   ),
-                                  Text(
-                                    _getAqiLabel(aqiVal).toUpperCase(),
-                                    style: TextStyle(
-                                      color: activeColor,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w800,
-                                      letterSpacing: 1.5,
-                                    ),
+                                ),
+                                Text(
+                                  _getAqiLabel(aqiVal).toUpperCase(),
+                                  style: TextStyle(
+                                    color: activeColor,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 1.5,
                                   ),
-                                ],
-                              ),
-                            ],
-                          ),
+                                ),
+                              ],
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'AIR QUALITY',
-                          style: TextStyle(
-                            color: _secondaryText,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 1.5,
-                          ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'AIR QUALITY',
+                        style: TextStyle(
+                          color: _secondaryText,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.5,
                         ),
-                      ],
-                    );
-                  },
-                ),
+                      ),
+                    ],
+                  );
+                },
               ),
+            ),
             ),
           ),
         ),
@@ -1355,9 +1397,11 @@ class AtmosphericBackgroundPainter extends CustomPainter {
     final r2 = size.width * 0.9;
 
     final paint1 = Paint()
-      ..shader = ui.Gradient.radial(Offset(x1, y1), r1, [orb1Color, orb1Color.withValues(alpha: 0.0)]);
+      ..shader = ui.Gradient.radial(Offset(x1, y1), r1, [orb1Color, orb1Color.withValues(alpha: 0)])
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 50);
     final paint2 = Paint()
-      ..shader = ui.Gradient.radial(Offset(x2, y2), r2, [orb2Color, orb2Color.withValues(alpha: 0.0)]);
+      ..shader = ui.Gradient.radial(Offset(x2, y2), r2, [orb2Color, orb2Color.withValues(alpha: 0)])
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 60);
 
     canvas.drawCircle(Offset(x1, y1), r1, paint1);
     canvas.drawCircle(Offset(x2, y2), r2, paint2);
@@ -1383,23 +1427,23 @@ class AtmosphericBackgroundPainter extends CustomPainter {
     
     final x1 = -60 + math.sin(floatTime) * 40;
     final y1 = size.height * 0.85 + math.cos(floatTime * 1.2) * 40;
-    final c1 = (isDay ? const Color(0xFF60A5FA) : const Color(0xFF818CF8)).withValues(alpha: 0.4);
     final p1 = Paint()
-      ..shader = ui.Gradient.radial(Offset(x1, y1), 200, [c1, c1.withValues(alpha: 0.0)]);
+      ..color = (isDay ? const Color(0xFF60A5FA) : const Color(0xFF818CF8)).withValues(alpha: 0.3)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 40);
     canvas.drawCircle(Offset(x1, y1), 200, p1);
 
     final x2 = size.width + 80 + math.cos(floatTime * 0.8) * 60;
     final y2 = size.height * 0.4 + math.sin(floatTime * 1.5) * 60;
-    final c2 = (isDay ? const Color(0xFF818CF8) : const Color(0xFFC084FC)).withValues(alpha: 0.35);
     final p2 = Paint()
-      ..shader = ui.Gradient.radial(Offset(x2, y2), 180, [c2, c2.withValues(alpha: 0.0)]);
+      ..color = (isDay ? const Color(0xFF818CF8) : const Color(0xFFC084FC)).withValues(alpha: 0.25)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 50);
     canvas.drawCircle(Offset(x2, y2), 180, p2);
 
     final x3 = size.width * 0.35 + math.sin(floatTime * 1.3) * 30;
     final y3 = size.height * 0.6 + math.cos(floatTime * 0.9) * 30;
-    final c3 = (isDay ? const Color(0xFF38BDF8) : const Color(0xFF60A5FA)).withValues(alpha: 0.3);
     final p3 = Paint()
-      ..shader = ui.Gradient.radial(Offset(x3, y3), 100, [c3, c3.withValues(alpha: 0.0)]);
+      ..color = (isDay ? const Color(0xFF38BDF8) : const Color(0xFF60A5FA)).withValues(alpha: 0.2)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 30);
     canvas.drawCircle(Offset(x3, y3), 100, p3);
   }
 
