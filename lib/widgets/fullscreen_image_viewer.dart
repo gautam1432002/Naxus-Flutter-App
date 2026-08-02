@@ -1,5 +1,6 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'glass_container.dart';
 
 class FullscreenImageViewer extends StatelessWidget {
   final String imageUrl;
@@ -36,21 +37,14 @@ class FullscreenImageViewer extends StatelessWidget {
           Positioned(
             top: MediaQuery.of(context).padding.top + 16,
             right: 16,
-            child: ClipRRect(
+            child: GlassContainer(
               borderRadius: BorderRadius.circular(24),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.1),
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                    shape: BoxShape.circle,
-                  ),
-                  child: IconButton(
-                    icon: const Icon(Icons.close, color: Colors.white),
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ),
+              blurSigma: 3.0,
+              overlayColor: Colors.white.withValues(alpha: 0.1),
+              borderColor: Colors.white.withValues(alpha: 0.2),
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.of(context).pop(),
               ),
             ),
           ),

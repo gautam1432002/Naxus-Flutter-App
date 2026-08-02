@@ -1,5 +1,6 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'glass_container.dart';
 import 'package:flutter/services.dart';
 
 class TactileGlassButton extends StatefulWidget {
@@ -44,20 +45,10 @@ class _TactileGlassButtonState extends State<TactileGlassButton> {
           child: SizedBox(
             width: 48,
             height: 48,
-            child: ClipRRect(
+            child: GlassContainer(
               borderRadius: BorderRadius.circular(24),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.15),
-                    border: Border.all(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      width: 0.5,
-                    ),
-                  ),
-                  child: Center(
-                    child: Icon(
+              child: Center(
+                child: Icon(
                       widget.icon,
                       color: widget.iconColor ?? Colors.white,
                       size: 22,
@@ -67,8 +58,6 @@ class _TactileGlassButtonState extends State<TactileGlassButton> {
               ),
             ),
           ),
-        ),
-      ),
     );
   }
 }

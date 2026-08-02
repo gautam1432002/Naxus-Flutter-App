@@ -1,5 +1,6 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
+import 'glass_container.dart';
 import 'package:flutter/services.dart';
 
 class FrostedBackButton extends StatefulWidget {
@@ -49,16 +50,15 @@ class _FrostedBackButtonState extends State<FrostedBackButton> {
           scale: _scale,
           duration: const Duration(milliseconds: 150),
           curve: Curves.easeOutCubic,
-          child: ClipOval(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 3.0, sigmaY: 3.0),
-              child: Container(
-                width: 44,
-                height: 44,
-                color: Colors.white.withValues(alpha: 0.20),
-                alignment: Alignment.center,
-                child: const Icon(Icons.arrow_back, color: Colors.white, size: 24),
-              ),
+          child: GlassContainer(
+            width: 44,
+            height: 44,
+            borderRadius: BorderRadius.circular(22),
+            overlayColor: Colors.white.withValues(alpha: 0.20),
+            borderColor: Colors.transparent,
+            blurSigma: 3.0,
+            child: const Center(
+              child: Icon(Icons.arrow_back, color: Colors.white, size: 24),
             ),
           ),
         ),

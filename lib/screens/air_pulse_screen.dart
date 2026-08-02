@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'dart:ui';
+import 'package:flutter/material.dart';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -23,6 +23,7 @@ import '../widgets/tactile_glass_button.dart';
 import '../widgets/nexus_universal_header.dart';
 import '../widgets/weather_illustration.dart';
 import '../services/app_data_store.dart';
+import '../widgets/glass_container.dart';
 import '../widgets/animated_number_counter.dart';
 import '../widgets/interactive_3d_card.dart';
 import '../widgets/weather_particle_system.dart';
@@ -38,6 +39,11 @@ class AirPulseScreen extends StatefulWidget {
 }
 
 class _AirPulseScreenState extends State<AirPulseScreen> {
+  bool get _isDay => _weather?.isDay ?? true;
+  Color get _primaryText => _isDay ? const Color(0xFF0F172A) : Colors.white;
+  Color get _secondaryText => _isDay ? const Color(0xFF64748B) : Colors.white70;
+
+
   final AirQualityService _airQualityService = AirQualityService();
   final WeatherService _weatherService = WeatherService();
   final LocationStorageService _locationStorageService = LocationStorageService();
@@ -180,9 +186,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
         return Container(
           margin: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1.0),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.04),
@@ -191,19 +195,20 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
               ),
             ],
           ),
-          child: ClipRRect(
+          child: GlassContainer(
             borderRadius: BorderRadius.circular(32),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-              child: Padding(
+            blurSigma: 12.0,
+            overlayColor: Colors.white.withValues(alpha: 0.12),
+            borderColor: Colors.white.withValues(alpha: 0.15),
+            child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       'Manage ${loc.name}',
-                      style: const TextStyle(
-                        color: Color(0xFF0F172A),
+                      style: TextStyle(
+                        color: _primaryText,
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -242,7 +247,6 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
                   ],
                 ),
               ),
-            ),
           ),
         );
       },
@@ -289,21 +293,21 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
             ),
           ),
           const SizedBox(height: 32),
-          const Text(
+          Text(
             'Discover Atmosphere',
             style: TextStyle(
-              color: Color(0xFF0F172A),
+              color: _primaryText,
               fontSize: 24,
               fontWeight: FontWeight.bold,
               letterSpacing: 1.2,
             ),
           ),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'Search for a city to view live\nweather and air quality data.',
             textAlign: TextAlign.center,
             style: TextStyle(
-              color: Color(0xFF64748B),
+              color: _secondaryText,
               fontSize: 16,
               height: 1.5,
             ),
@@ -337,56 +341,42 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
       child: SlideAnimation(
         verticalOffset: 30.0,
         child: FadeInAnimation(
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              color: Colors.white.withValues(alpha: 0.20),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.30), width: 1.0),
-              boxShadow: [
-                BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.05),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
+          child: GlassContainer(
+            borderRadius: BorderRadius.circular(24),
+            blurSigma: 12.0,
+            overlayColor: Colors.white.withValues(alpha: 0.08),
+            borderColor: Colors.white.withValues(alpha: 0.2),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Icon(icon, color: accentColor.withValues(alpha: 0.8), size: 16),
-                          const SizedBox(width: 8),
-                          Text(
-                            title.toUpperCase(),
-                            style: const TextStyle(
-                              color: Color(0xFF64748B),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.8,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
+                      Icon(icon, color: accentColor.withValues(alpha: 0.8), size: 16),
+                      const SizedBox(width: 8),
                       Text(
-                        value,
-                        style: const TextStyle(
-                          color: Color(0xFF0F172A),
+                        title.toUpperCase(),
+                        style: TextStyle(
+                          color: _secondaryText,
+                          fontSize: 11,
                           fontWeight: FontWeight.w800,
-                          fontSize: 18,
+                          letterSpacing: 0.8,
                         ),
                       ),
                     ],
                   ),
-                ),
+                  const Spacer(),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      color: _primaryText,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 18,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -397,71 +387,57 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
 
   Widget _buildAqiSecondaryCard(String title, double value, String unit, IconData icon) {
     return Expanded(
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          color: Colors.white.withValues(alpha: 0.20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.30), width: 1.0),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0F172A).withValues(alpha: 0.05),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      child: GlassContainer(
+        borderRadius: BorderRadius.circular(24),
+        blurSigma: 12.0,
+        overlayColor: Colors.white.withValues(alpha: 0.08),
+        borderColor: Colors.white.withValues(alpha: 0.2),
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Icon(icon, color: const Color(0xFF64748B), size: 16),
-                      const SizedBox(width: 8),
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          color: Color(0xFF64748B),
-                          fontWeight: FontWeight.w800,
-                          fontSize: 11,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        value.toStringAsFixed(1),
-                        style: const TextStyle(
-                          color: Color(0xFF0F172A),
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 4.0),
-                        child: Text(
-                          unit,
-                          style: TextStyle(
-                            color: const Color(0xFF0F172A).withValues(alpha: 0.5),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
+                  Icon(icon, color: _secondaryText, size: 16),
+                  const SizedBox(width: 8),
+                  Text(
+                    title,
+                    style: TextStyle(
+                      color: _secondaryText,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 11,
+                      letterSpacing: 0.8,
+                    ),
                   ),
                 ],
               ),
-            ),
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    value.toStringAsFixed(1),
+                    style: TextStyle(
+                      color: _primaryText,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4.0),
+                    child: Text(
+                      unit,
+                      style: TextStyle(
+                        color: _primaryText.withValues(alpha: 0.5),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
       ),
@@ -481,28 +457,23 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
       child: Interactive3DCard(
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 400),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isActive 
-              ? [Colors.white.withValues(alpha: 0.35), Colors.white.withValues(alpha: 0.15)]
-              : [Colors.white.withValues(alpha: 0.20), Colors.white.withValues(alpha: 0.05)],
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: _primaryText.withValues(alpha: isActive ? 0.08 : 0.03),
+                blurRadius: isActive ? 24 : 12,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-          border: Border.all(color: Colors.white.withValues(alpha: isActive ? 0.40 : 0.20), width: 1.0),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0F172A).withValues(alpha: isActive ? 0.08 : 0.03),
-              blurRadius: isActive ? 24 : 12,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: GlassContainer(
+            borderRadius: BorderRadius.circular(28),
+            blurSigma: 16.0,
+            overlayColor: isActive 
+                ? Colors.white.withValues(alpha: 0.15)
+                : Colors.white.withValues(alpha: 0.05),
+            borderColor: Colors.white.withValues(alpha: isActive ? 0.40 : 0.20),
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: Row(
@@ -516,8 +487,8 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
                           value: _weather!.temperature,
                           fractionDigits: 0,
                           suffix: '°',
-                          style: const TextStyle(
-                            color: Color(0xFF0F172A),
+                          style: TextStyle(
+                            color: _primaryText,
                             fontSize: 48,
                             fontWeight: FontWeight.w900,
                             height: 1.0,
@@ -530,8 +501,8 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
                           fractionDigits: 0,
                           prefix: 'Feels like ',
                           suffix: '°',
-                          style: const TextStyle(
-                            color: Color(0xFF64748B),
+                          style: TextStyle(
+                            color: _secondaryText,
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
@@ -539,8 +510,8 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
                         const Spacer(),
                         Text(
                           _weather!.conditionLabel,
-                          style: const TextStyle(
-                            color: Color(0xFF0F172A),
+                          style: TextStyle(
+                            color: _primaryText,
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
                             letterSpacing: -0.5,
@@ -568,7 +539,6 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
           ),
         ),
       ),
-      ),
     );
   }
 
@@ -585,104 +555,98 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
       child: Interactive3DCard(
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 400),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isActive 
-              ? [Colors.white.withValues(alpha: 0.35), Colors.white.withValues(alpha: 0.15)]
-              : [Colors.white.withValues(alpha: 0.20), Colors.white.withValues(alpha: 0.05)],
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(28),
+            boxShadow: [
+              BoxShadow(
+                color: _primaryText.withValues(alpha: isActive ? 0.08 : 0.03),
+                blurRadius: isActive ? 24 : 12,
+                offset: const Offset(0, 8),
+              ),
+            ],
           ),
-          border: Border.all(color: Colors.white.withValues(alpha: isActive ? 0.40 : 0.20), width: 1.0),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF0F172A).withValues(alpha: isActive ? 0.08 : 0.03),
-              blurRadius: isActive ? 24 : 12,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(28),
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: GlassContainer(
+            borderRadius: BorderRadius.circular(28),
+            blurSigma: 16.0,
+            overlayColor: isActive 
+                ? Colors.white.withValues(alpha: 0.15)
+                : Colors.white.withValues(alpha: 0.05),
+            borderColor: Colors.white.withValues(alpha: isActive ? 0.40 : 0.20),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
               child: RepaintBoundary(
-              child: TweenAnimationBuilder<double>(
-                tween: Tween<double>(begin: 0.0, end: _airQuality!.europeanAqi),
-                duration: const Duration(milliseconds: 1200),
-                curve: Curves.easeOutCubic,
-                builder: (context, aqiVal, child) {
-                  final normalizedValue = math.min(aqiVal / 100.0, 1.0);
-                  final activeColor = _getAqiColor(aqiVal);
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0.0, end: _airQuality!.europeanAqi),
+                  duration: const Duration(milliseconds: 1200),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, aqiVal, child) {
+                    final normalizedValue = math.min(aqiVal / 100.0, 1.0);
+                    final activeColor = _getAqiColor(aqiVal);
 
-                  return Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        height: 110,
-                        width: 110,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            BreathingAqiRing(
-                              aqiVal: _airQuality!.europeanAqi,
-                              child: CustomPaint(
-                                size: const Size(110, 110),
-                                painter: AqiGaugePainter(
-                                  value: normalizedValue,
-                                  activeColor: activeColor,
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        SizedBox(
+                          height: 110,
+                          width: 110,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              BreathingAqiRing(
+                                aqiVal: _airQuality!.europeanAqi,
+                                child: CustomPaint(
+                                  size: const Size(110, 110),
+                                  painter: AqiGaugePainter(
+                                    value: normalizedValue,
+                                    activeColor: activeColor,
+                                  ),
                                 ),
                               ),
-                            ),
-                            Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                AnimatedNumberCounter(
-                                  value: aqiVal,
-                                  fractionDigits: 0,
-                                  style: const TextStyle(
-                                    color: Color(0xFF0F172A),
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: -1,
+                              Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  AnimatedNumberCounter(
+                                    value: aqiVal,
+                                    fractionDigits: 0,
+                                    style: TextStyle(
+                                      color: _primaryText,
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.w900,
+                                      letterSpacing: -1,
+                                    ),
                                   ),
-                                ),
-                                Text(
-                                  _getAqiLabel(aqiVal).toUpperCase(),
-                                  style: TextStyle(
-                                    color: activeColor,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 1.5,
+                                  Text(
+                                    _getAqiLabel(aqiVal).toUpperCase(),
+                                    style: TextStyle(
+                                      color: activeColor,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w800,
+                                      letterSpacing: 1.5,
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
-                          ],
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'AIR QUALITY',
-                        style: TextStyle(
-                          color: Color(0xFF64748B),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.5,
+                        const SizedBox(height: 16),
+                        Text(
+                          'AIR QUALITY',
+                          style: TextStyle(
+                            color: _secondaryText,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.5,
+                          ),
                         ),
-                      ),
-                    ],
-                  );
-                },
+                      ],
+                    );
+                  },
+                ),
               ),
-            ),
             ),
           ),
         ),
-      ),
       ),
     );
   }
@@ -741,8 +705,8 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
                   Expanded(
                     child: Text(
                       _currentLocation!.name,
-                      style: const TextStyle(
-                        color: Color(0xFF0F172A),
+                      style: TextStyle(
+                        color: _primaryText,
                         fontSize: 36,
                         fontWeight: FontWeight.bold,
                         letterSpacing: -1,
@@ -774,8 +738,8 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
                 alignment: Alignment.centerLeft,
                 child: Text(
                   _currentLocation!.country,
-                  style: const TextStyle(
-                    color: Color(0xFF64748B),
+                  style: TextStyle(
+                    color: _secondaryText,
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
                   ),
@@ -901,7 +865,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
                               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                               decoration: BoxDecoration(
                                 color: isSelected 
-                                    ? const Color(0xFF0F172A) 
+                                    ? _primaryText 
                                     : Colors.white.withValues(alpha: 0.3),
                                 borderRadius: BorderRadius.circular(24),
                                 border: Border.all(
@@ -913,7 +877,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
                                 boxShadow: isSelected 
                                   ? [
                                       BoxShadow(
-                                        color: const Color(0xFF0F172A).withValues(alpha: 0.3),
+                                        color: _primaryText.withValues(alpha: 0.3),
                                         blurRadius: 10,
                                         offset: const Offset(0, 4),
                                       ),
@@ -1051,17 +1015,13 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
+    return GlassContainer(
       borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-        child: Container(
-          height: MediaQuery.of(context).size.height * 0.85,
-          decoration: BoxDecoration(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.12),
-            border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.15), width: 1)),
-          ),
-          child: Padding(
+      blurSigma: 12.0,
+      height: MediaQuery.of(context).size.height * 0.85,
+      overlayColor: const Color(0xFF0F172A).withValues(alpha: 0.12),
+      borderColor: Colors.white.withValues(alpha: 0.15),
+      child: Padding(
             padding: EdgeInsets.only(
               top: 24,
               left: 24,
@@ -1084,34 +1044,27 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
                 ),
                 
                 // Search Bar
-                ClipRRect(
+                GlassContainer(
                   borderRadius: BorderRadius.circular(24),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.05),
+                  blurSigma: 8.0,
+                  overlayColor: Colors.white.withValues(alpha: 0.05),
+                  borderColor: Colors.white.withValues(alpha: 0.1),
+                  child: TextField(
+                    autofocus: true,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
+                    decoration: InputDecoration(
+                      hintText: 'Search city...',
+                      hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+                      filled: true,
+                      fillColor: Colors.transparent,
+                      prefixIcon: const Icon(Icons.search, color: Colors.white),
+                      border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1.0),
+                        borderSide: BorderSide.none,
                       ),
-                      child: TextField(
-                        autofocus: true,
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
-                        decoration: InputDecoration(
-                          hintText: 'Search city...',
-                          hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
-                          filled: true,
-                          fillColor: Colors.transparent,
-                          prefixIcon: const Icon(Icons.search, color: Colors.white),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(24),
-                            borderSide: BorderSide.none,
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-                        ),
-                        onChanged: _onSearchChanged,
-                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
                     ),
+                    onChanged: _onSearchChanged,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -1131,66 +1084,56 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
                       separatorBuilder: (context, index) => const SizedBox(height: 16),
                       itemBuilder: (context, index) {
                         final loc = _searchResults[index];
-                        return ClipRRect(
+                        return GlassContainer(
                           borderRadius: BorderRadius.circular(24),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.05),
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.0),
-                              ),
-                              child: Material(
-                                color: Colors.transparent,
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(24),
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    widget.onSelect(loc);
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Row(
+                          blurSigma: 8.0,
+                          overlayColor: Colors.white.withValues(alpha: 0.05),
+                          borderColor: Colors.white.withValues(alpha: 0.1),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(24),
+                            onTap: () {
+                              Navigator.pop(context);
+                              widget.onSelect(loc);
+                            },
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(12),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(16),
+                                      border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1.0),
+                                    ),
+                                    child: const Icon(Icons.location_on_rounded, color: Colors.white, size: 24),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        Container(
-                                          padding: const EdgeInsets.all(12),
-                                          decoration: BoxDecoration(
-                                            color: Colors.white.withValues(alpha: 0.1),
-                                            borderRadius: BorderRadius.circular(16),
-                                            border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1.0),
+                                        Text(
+                                          loc.name,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w600,
+                                            letterSpacing: 0.2,
                                           ),
-                                          child: const Icon(Icons.location_on_rounded, color: Colors.white, size: 24),
                                         ),
-                                        const SizedBox(width: 16),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                loc.name,
-                                                style: const TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 18,
-                                                  fontWeight: FontWeight.w600,
-                                                  letterSpacing: 0.2,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                loc.country,
-                                                style: TextStyle(
-                                                  color: Colors.white.withValues(alpha: 0.6),
-                                                  fontSize: 14,
-                                                ),
-                                              ),
-                                            ],
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          loc.country,
+                                          style: TextStyle(
+                                            color: Colors.white.withValues(alpha: 0.6),
+                                            fontSize: 14,
                                           ),
                                         ),
                                       ],
                                     ),
                                   ),
-                                ),
+                                ],
                               ),
                             ),
                           ),
@@ -1201,8 +1144,6 @@ class _SearchBottomSheetState extends State<_SearchBottomSheet> {
               ],
             ),
           ),
-        ),
-      ),
     );
   }
 }
@@ -1311,166 +1252,291 @@ class AtmosphericBackgroundPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // 1. Time-of-Day Solar Gradients for Weather Mode
-    final now = DateTime.now();
-    final hour = now.hour + now.minute / 60.0;
+    bool isDay = true;
+    if (weather != null) {
+      isDay = weather!.isDay;
+    }
     
-    Color topWeatherColor = const Color(0xFF38BDF8); // Day blue
-    Color bottomWeatherColor = const Color(0xFFF1F5F9); // Day light
-    
-    if (hour >= 18 || hour < 5) {
-      // Night / Dusk
-      topWeatherColor = const Color(0xFF0F172A);
-      bottomWeatherColor = const Color(0xFF1E293B);
-    } else if (hour >= 16 && hour < 18) {
-      // Sunset
-      topWeatherColor = const Color(0xFFF59E0B);
-      bottomWeatherColor = const Color(0xFFEF4444);
-    } else if (hour >= 5 && hour < 8) {
-      // Sunrise
-      topWeatherColor = const Color(0xFFFCD34D);
-      bottomWeatherColor = const Color(0xFFF472B6);
+    // 1. Base color interpolation (Mesh Gradient)
+    _drawMeshGradient(canvas, size, isDay);
+
+    // 2. Drifting Ambient Orbs
+    _drawDriftingOrbs(canvas, size, isDay);
+
+    // 3. Morphing Ambient AQI -> Weather Elements
+    Color c1 = const Color(0xFF10B981); // AQI Green
+    Color c2 = const Color(0xFF3B82F6); // AQI Blue
+    if (aqi != null) {
+      final aqiVal = aqi!.europeanAqi;
+      if (aqiVal > 66) { c1 = const Color(0xFFEF4444); c2 = const Color(0xFFF97316); }
+      else if (aqiVal > 33) { c1 = const Color(0xFFEAB308); c2 = const Color(0xFFF97316); }
     }
 
-    // Base color for AQI Mode
-    Color aqiTopColor = const Color(0xFF0F172A);
-    Color aqiBottomColor = const Color(0xFF1E293B);
+    final aqiTopLeft = const Offset(-50, -50);
+    final aqiTopLeftRadius = 250.0;
+    
+    final aqiBottomRight = Offset(size.width - 50, size.height - 150);
+    final aqiBottomRightRadius = 300.0;
 
-    final topColor = Color.lerp(aqiTopColor, topWeatherColor, transition)!;
-    final bottomColor = Color.lerp(aqiBottomColor, bottomWeatherColor, transition)!;
+    String cond = weather?.conditionLabel.toLowerCase() ?? 'clear';
+    bool isCloudy = cond.contains('cloud');
+    bool isRain = cond.contains('rain') || cond.contains('drizzle') || cond.contains('thunder') || cond.contains('storm');
+    bool isSnow = cond.contains('snow');
+    bool isClear = !isCloudy && !isRain && !isSnow;
 
-    final bgPaint = Paint()
-      ..shader = ui.Gradient.linear(
-        Offset.zero, 
-        Offset(0, size.height), 
-        [topColor, bottomColor]
-      );
-    canvas.drawRect(Offset.zero & size, bgPaint);
-
-    // --- AQI Aurora Effect ---
-    if (transition < 1.0) {
-      final aqiVal = aqi?.europeanAqi ?? 0;
-      Color auroraC1 = const Color(0xFF10B981); // Green
-      Color auroraC2 = const Color(0xFF3B82F6); // Blue
+    if (isClear) {
+      if (isDay) {
+        _drawSunTransition(canvas, size, c1, aqiTopLeft, aqiTopLeftRadius);
+      } else {
+        _drawMoonTransition(canvas, size, c1, aqiTopLeft, aqiTopLeftRadius);
+      }
       
-      if (aqiVal > 66) { 
-        auroraC1 = const Color(0xFFEF4444); 
-        auroraC2 = const Color(0xFFF97316); 
-      } else if (aqiVal > 33) { 
-        auroraC1 = const Color(0xFFEAB308); 
-        auroraC2 = const Color(0xFFF97316); 
-      }
+      final cloudCenter = Offset.lerp(aqiBottomRight, Offset(180, size.height - 300), transition)!;
+      final cloudW = ui.lerpDouble(aqiBottomRightRadius * 2, 600, transition)!;
+      final cloudColor = Color.lerp(c2.withValues(alpha: 0.3), Colors.white.withValues(alpha: 0.6), transition)!;
+      _drawStylizedCloud(canvas, cloudCenter, cloudW, cloudColor);
+    } else if (isCloudy) {
+       final cloud1Center = Offset.lerp(aqiTopLeft, Offset(120, 150), transition)!;
+       final cloud1R = ui.lerpDouble(aqiTopLeftRadius, 180, transition)!;
+       final c1Color = Color.lerp(c1.withValues(alpha: 0.3), isDay ? Colors.white.withValues(alpha: 0.8) : const Color(0xFF94A3B8).withValues(alpha: 0.6), transition)!;
+       _drawStylizedCloud(canvas, cloud1Center, cloud1R * 2, c1Color);
 
-      final auroraOpacity = 1.0 - transition;
-      _drawAuroraMesh(canvas, size, time, auroraC1, auroraC2, auroraOpacity);
+       final cloud2Center = Offset.lerp(aqiBottomRight, Offset(size.width - 150, 320), transition)!;
+       final cloud2R = ui.lerpDouble(aqiBottomRightRadius, 250, transition)!;
+       final c2Color = Color.lerp(c2.withValues(alpha: 0.3), isDay ? const Color(0xFFE2E8F0).withValues(alpha: 0.7) : const Color(0xFF64748B).withValues(alpha: 0.5), transition)!;
+       _drawStylizedCloud(canvas, cloud2Center, cloud2R * 2, c2Color);
+    } else if (isRain) {
+       final cloud1Center = Offset.lerp(aqiTopLeft, Offset(size.width/2, 100), transition)!;
+       final cloud1R = ui.lerpDouble(aqiTopLeftRadius, size.width * 0.45, transition)!;
+       final c1Color = Color.lerp(c1.withValues(alpha: 0.3), const Color(0xFF94A3B8).withValues(alpha: 0.7), transition)!;
+       _drawStylizedCloud(canvas, cloud1Center, cloud1R * 2, c1Color);
+
+       final cloud2Center = Offset.lerp(aqiBottomRight, Offset(size.width - 100, 250), transition)!;
+       final cloud2R = ui.lerpDouble(aqiBottomRightRadius, 200, transition)!;
+       final c2Color = Color.lerp(c2.withValues(alpha: 0.3), const Color(0xFF64748B).withValues(alpha: 0.5), transition)!;
+       _drawStylizedCloud(canvas, cloud2Center, cloud2R * 2, c2Color);
+    } else {
+       final cloud1Center = Offset.lerp(aqiTopLeft, Offset(size.width/2, 150), transition)!;
+       final cloud1R = ui.lerpDouble(aqiTopLeftRadius, size.width * 0.5, transition)!;
+       final c1Color = Color.lerp(c1.withValues(alpha: 0.3), const Color(0xFFDBEAFE).withValues(alpha: 0.6), transition)!;
+       _drawStylizedCloud(canvas, cloud1Center, cloud1R * 2, c1Color);
+
+       final cloud2Center = Offset.lerp(aqiBottomRight, Offset(size.width - 200, 350), transition)!;
+       final cloud2R = ui.lerpDouble(aqiBottomRightRadius, 250, transition)!;
+       final c2Color = Color.lerp(c2.withValues(alpha: 0.3), Colors.white.withValues(alpha: 0.5), transition)!;
+       _drawStylizedCloud(canvas, cloud2Center, cloud2R * 2, c2Color);
     }
-
-    // --- Weather Elements ---
-    if (transition > 0.0) {
-      String cond = weather?.conditionLabel.toLowerCase() ?? 'clear';
-      bool isCloudy = cond.contains('cloud');
-      bool isRain = cond.contains('rain') || cond.contains('drizzle') || cond.contains('thunder');
-      bool isSnow = cond.contains('snow');
-      bool isClear = !isCloudy && !isRain && !isSnow;
-
-      if (isClear) {
-        _drawGodRays(canvas, size, time, transition);
-      } else if (isCloudy || isRain || isSnow) {
-        _drawVolumetricClouds(canvas, size, time, transition, isRain ? Colors.grey : Colors.white);
-      }
-    }
-
-    // Vignette Overlay
-    final vignette = Paint()
-      ..shader = ui.Gradient.radial(
-        Offset(size.width / 2, size.height / 2),
-        size.height * 0.8,
-        [Colors.transparent, Colors.black.withValues(alpha: 0.4)],
-        [0.4, 1.0],
-      )
-      ..blendMode = BlendMode.multiply;
-    canvas.drawRect(Offset.zero & size, vignette);
   }
 
-  void _drawAuroraMesh(Canvas canvas, Size size, double t, Color c1, Color c2, double opacity) {
+  void _drawMeshGradient(Canvas canvas, Size size, bool isDay) {
+    final baseAqi = isDay ? const Color(0xFFE2E8F0) : const Color(0xFF0F172A);
+    final baseWeather = isDay ? const Color(0xFFF8FAFC) : const Color(0xFF020617);
+    final baseColor = Color.lerp(baseAqi, baseWeather, transition)!;
+    canvas.drawColor(baseColor, BlendMode.srcOver);
+
+    // Highly vibrant mesh orbs
+    final orb1Color = Color.lerp(
+      isDay ? const Color(0xFF38BDF8).withValues(alpha: 0.3) : const Color(0xFF4F46E5).withValues(alpha: 0.5),
+      isDay ? const Color(0xFF0EA5E9).withValues(alpha: 0.3) : const Color(0xFF312E81).withValues(alpha: 0.6),
+      transition
+    )!;
+    final orb2Color = Color.lerp(
+      isDay ? const Color(0xFF34D399).withValues(alpha: 0.2) : const Color(0xFF9333EA).withValues(alpha: 0.4),
+      isDay ? const Color(0xFFF59E0B).withValues(alpha: 0.3) : const Color(0xFF7E22CE).withValues(alpha: 0.5),
+      transition
+    )!;
+
+    final x1 = size.width * 0.5 + math.sin(time * math.pi * 2) * size.width * 0.4;
+    final y1 = size.height * 0.5 + math.cos(time * math.pi * 1.5) * size.height * 0.3;
+    final r1 = size.width * 0.8;
+
+    final x2 = size.width * 0.5 + math.cos(time * math.pi * 2.5) * size.width * 0.5;
+    final y2 = size.height * 0.5 + math.sin(time * math.pi * 1.8) * size.height * 0.4;
+    final r2 = size.width * 0.9;
+
+    final paint1 = Paint()
+      ..shader = ui.Gradient.radial(Offset(x1, y1), r1, [orb1Color, orb1Color.withValues(alpha: 0.0)]);
+    final paint2 = Paint()
+      ..shader = ui.Gradient.radial(Offset(x2, y2), r2, [orb2Color, orb2Color.withValues(alpha: 0.0)]);
+
+    canvas.drawCircle(Offset(x1, y1), r1, paint1);
+    canvas.drawCircle(Offset(x2, y2), r2, paint2);
+
+    if (!isDay) {
+      // Starfield always visible at night, intensifies on Weather tab
+      final starAlphaBase = ui.lerpDouble(0.3, 0.8, transition)!;
+      final starPaint = Paint();
+      final random = math.Random(42);
+      for (int i = 0; i < 50; i++) {
+        final sx = random.nextDouble() * size.width;
+        final sy = random.nextDouble() * size.height * 0.7;
+        final sr = random.nextDouble() * 1.5 + 0.5;
+        final twinkle = (math.sin(time * math.pi * 10 + i) + 1) / 2 * 0.5 + 0.5;
+        starPaint.color = Colors.white.withValues(alpha: starAlphaBase * twinkle);
+        canvas.drawCircle(Offset(sx, sy), sr, starPaint);
+      }
+    }
+  }
+
+  void _drawDriftingOrbs(Canvas canvas, Size size, bool isDay) {
+    final floatTime = time * math.pi * 2;
+    
+    final x1 = -60 + math.sin(floatTime) * 40;
+    final y1 = size.height * 0.85 + math.cos(floatTime * 1.2) * 40;
+    final c1 = (isDay ? const Color(0xFF60A5FA) : const Color(0xFF818CF8)).withValues(alpha: 0.4);
     final p1 = Paint()
-      ..color = c1.withValues(alpha: opacity * 0.4)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 100);
-    
-    final p2 = Paint()
-      ..color = c2.withValues(alpha: opacity * 0.4)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 120);
-
-    final x1 = size.width * 0.5 + math.sin(t * math.pi * 2) * size.width * 0.4;
-    final y1 = size.height * 0.3 + math.cos(t * math.pi * 1.5) * size.height * 0.25;
-    
-    final x2 = size.width * 0.5 + math.cos(t * math.pi * 2.2) * size.width * 0.4;
-    final y2 = size.height * 0.7 + math.sin(t * math.pi * 1.8) * size.height * 0.25;
-
+      ..shader = ui.Gradient.radial(Offset(x1, y1), 200, [c1, c1.withValues(alpha: 0.0)]);
     canvas.drawCircle(Offset(x1, y1), 200, p1);
-    canvas.drawCircle(Offset(x2, y2), 250, p2);
-    
+
+    final x2 = size.width + 80 + math.cos(floatTime * 0.8) * 60;
+    final y2 = size.height * 0.4 + math.sin(floatTime * 1.5) * 60;
+    final c2 = (isDay ? const Color(0xFF818CF8) : const Color(0xFFC084FC)).withValues(alpha: 0.35);
+    final p2 = Paint()
+      ..shader = ui.Gradient.radial(Offset(x2, y2), 180, [c2, c2.withValues(alpha: 0.0)]);
+    canvas.drawCircle(Offset(x2, y2), 180, p2);
+
+    final x3 = size.width * 0.35 + math.sin(floatTime * 1.3) * 30;
+    final y3 = size.height * 0.6 + math.cos(floatTime * 0.9) * 30;
+    final c3 = (isDay ? const Color(0xFF38BDF8) : const Color(0xFF60A5FA)).withValues(alpha: 0.3);
     final p3 = Paint()
-      ..color = c1.withValues(alpha: opacity * 0.24)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 150);
-      
-    final x3 = size.width * 0.5 + math.sin(t * math.pi * 1.2) * size.width * 0.5;
-    final y3 = size.height * 0.5 + math.cos(t * math.pi * 2.5) * size.height * 0.35;
-    
-    canvas.drawCircle(Offset(x3, y3), 300, p3);
+      ..shader = ui.Gradient.radial(Offset(x3, y3), 100, [c3, c3.withValues(alpha: 0.0)]);
+    canvas.drawCircle(Offset(x3, y3), 100, p3);
   }
 
-  void _drawGodRays(Canvas canvas, Size size, double t, double opacity) {
-    canvas.save();
-    canvas.translate(size.width * 0.8, size.height * 0.2); // Sun position
-
-    final rayPaint = Paint()
-      ..shader = ui.Gradient.linear(
-        Offset.zero, 
-        Offset(-size.width, size.height), 
-        [
-          Colors.white.withValues(alpha: 0.12 * opacity),
+  void _drawSunTransition(Canvas canvas, Size size, Color c1, Offset aqiTopLeft, double aqiTopLeftRadius) {
+      final sunCenter = Offset.lerp(aqiTopLeft, Offset(size.width - 60, 180), transition)!;
+      final sunRadius = ui.lerpDouble(aqiTopLeftRadius, 140.0, transition)!;
+      
+      final sunGlow = Paint()
+        ..shader = ui.Gradient.radial(sunCenter, sunRadius * 1.8, [
+          Color.lerp(c1.withValues(alpha: 0.3), const Color(0xFFFDE047).withValues(alpha: 0.6), transition)!,
+          Color.lerp(c1.withValues(alpha: 0.0), const Color(0xFFF59E0B).withValues(alpha: 0.0), transition)!,
+        ]);
+      canvas.drawCircle(sunCenter, sunRadius * 1.8, sunGlow);
+      
+      final sunBody = Paint()
+        ..shader = ui.Gradient.radial(sunCenter, sunRadius, [
+            Color.lerp(c1.withValues(alpha: 0.2), const Color(0xFFFEF08A), transition)!,
+            Color.lerp(c1.withValues(alpha: 0.0), const Color(0xFFF59E0B), transition)!,
+          ]
+        );
+      canvas.drawCircle(sunCenter, sunRadius * 0.6, sunBody);
+      
+      final flarePaint = Paint()
+        ..shader = ui.Gradient.radial(sunCenter, sunRadius * 1.2, [
+          Colors.white.withValues(alpha: ui.lerpDouble(0.1, 0.8, transition)!),
           Colors.white.withValues(alpha: 0.0),
-        ]
-      )
-      ..blendMode = BlendMode.screen;
-
-    final rayCount = 5;
-    for (int i = 0; i < rayCount; i++) {
-      canvas.save();
-      double angle = (i * math.pi / 6) + (math.sin(t * math.pi * 2 + i) * 0.05);
-      canvas.rotate(angle);
+        ])
+        ..blendMode = BlendMode.overlay;
+      canvas.drawCircle(sunCenter, sunRadius * 1.2, flarePaint);
       
-      final path = Path()
-        ..moveTo(0, -30)
-        ..lineTo(-size.width * 1.5, size.height)
-        ..lineTo(-size.width * 1.1, size.height)
-        ..lineTo(0, 30)
-        ..close();
-        
-      canvas.drawPath(path, rayPaint);
+      final rayPaint = Paint()
+        ..shader = ui.Gradient.linear(
+          Offset.zero, Offset(0, sunRadius),
+          [
+             Color.lerp(c1.withValues(alpha: 0.1), const Color(0xFFFDE047).withValues(alpha: 0.5), transition)!,
+             Color.lerp(c1.withValues(alpha: 0.0), const Color(0xFFF59E0B).withValues(alpha: 0.0), transition)!,
+          ]
+        )
+        ..strokeWidth = ui.lerpDouble(4.0, 12.0, transition)!
+        ..strokeCap = StrokeCap.round
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
+
+      canvas.save();
+      canvas.translate(sunCenter.dx, sunCenter.dy);
+      canvas.rotate(time * math.pi * 2);
+      for (int i=0; i<8; i++) {
+         canvas.save();
+         canvas.rotate(i * math.pi / 4);
+         canvas.drawLine(Offset(0, sunRadius * 0.5), Offset(0, sunRadius * 0.8 + math.sin(time * math.pi * 10)*15), rayPaint);
+         canvas.restore();
+      }
       canvas.restore();
-    }
-    canvas.restore();
   }
 
-  void _drawVolumetricClouds(Canvas canvas, Size size, double t, double opacity, Color cloudColor) {
-    final p = Paint()
-      ..color = cloudColor.withValues(alpha: 0.08 * opacity)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 100);
+  void _drawMoonTransition(Canvas canvas, Size size, Color c1, Offset aqiTopLeft, double aqiTopLeftRadius) {
+      final moonCenter = Offset.lerp(aqiTopLeft, Offset(size.width - 70, 150), transition)!;
+      final moonRadius = ui.lerpDouble(aqiTopLeftRadius, 80.0, transition)!;
+      
+      final moonGlow = Paint()
+        ..shader = ui.Gradient.radial(moonCenter, moonRadius * 2.5, [
+          Color.lerp(c1.withValues(alpha: 0.3), const Color(0xFFDBEAFE).withValues(alpha: 0.4), transition)!,
+          Color.lerp(c1.withValues(alpha: 0.0), const Color(0xFF1E3A8A).withValues(alpha: 0.0), transition)!,
+        ]);
+      canvas.drawCircle(moonCenter, moonRadius * 2.5, moonGlow);
+      
+      final moonBody = Paint()
+        ..shader = ui.Gradient.radial(
+          Offset(moonCenter.dx - moonRadius * 0.2, moonCenter.dy - moonRadius * 0.2), 
+          moonRadius, 
+          [
+            Color.lerp(c1.withValues(alpha: 0.2), const Color(0xFFF8FAFC), transition)!,
+            Color.lerp(c1.withValues(alpha: 0.0), const Color(0xFF94A3B8), transition)!,
+          ]
+        );
+      canvas.drawCircle(moonCenter, moonRadius, moonBody);
 
-    final x1 = size.width * 0.2 + math.sin(t * math.pi) * 50;
-    final y1 = size.height * 0.15 + math.cos(t * math.pi * 0.8) * 30;
+      final craterPaint = Paint()
+        ..color = const Color(0xFF64748B).withValues(alpha: ui.lerpDouble(0.05, 0.25, transition)!)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+      
+      canvas.drawCircle(Offset(moonCenter.dx + moonRadius * 0.2, moonCenter.dy - moonRadius * 0.3), moonRadius * 0.2, craterPaint);
+      canvas.drawCircle(Offset(moonCenter.dx - moonRadius * 0.3, moonCenter.dy + moonRadius * 0.2), moonRadius * 0.3, craterPaint);
+      canvas.drawCircle(Offset(moonCenter.dx + moonRadius * 0.4, moonCenter.dy + moonRadius * 0.4), moonRadius * 0.15, craterPaint);
+  }
 
-    final x2 = size.width * 0.8 + math.cos(t * math.pi * 1.2) * 60;
-    final y2 = size.height * 0.25 + math.sin(t * math.pi * 1.5) * 40;
-    
-    final x3 = size.width * 0.5 + math.sin(t * math.pi * 0.5) * 80;
-    final y3 = size.height * 0.05;
+  void _drawStylizedCloud(Canvas canvas, Offset center, double width, Color color) {
+     final floatOffset = math.sin(time * math.pi * 10) * 8;
+     final c = Offset(center.dx, center.dy + floatOffset);
 
-    canvas.drawCircle(Offset(x1, y1), 220, p);
-    canvas.drawCircle(Offset(x2, y2), 260, p);
-    canvas.drawCircle(Offset(x3, y3), 300, p);
+    final r1 = width * 0.28;
+    final r2 = width * 0.40;
+    final r3 = width * 0.22;
+
+
+     final d1 = Offset(-width * 0.25, 20);
+     final d2 = Offset.zero;
+     final d3 = Offset(width * 0.30, 30);
+
+     final shadow = Paint()
+       ..color = Colors.black.withValues(alpha: 0.15)
+       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 35);
+     canvas.drawCircle(c + d1 + const Offset(0, 15), r1, shadow);
+     canvas.drawCircle(c + d2 + const Offset(0, 15), r2, shadow);
+     canvas.drawCircle(c + d3 + const Offset(0, 15), r3, shadow);
+
+     final centerColor = Colors.white.withValues(alpha: 0.8);
+     final paint1 = Paint()..shader = ui.Gradient.radial(c + d1, r1, [centerColor, color]);
+     final paint2 = Paint()..shader = ui.Gradient.radial(c + d2, r2, [centerColor, color]);
+     final paint3 = Paint()..shader = ui.Gradient.radial(c + d3, r3, [centerColor, color]);
+     
+     canvas.drawCircle(c + d1, r1, paint1);
+     canvas.drawCircle(c + d2, r2, paint2);
+     canvas.drawCircle(c + d3, r3, paint3);
+
+     final highlight = Paint()
+       ..shader = ui.Gradient.linear(
+         Offset(c.dx, c.dy - width * 0.4),
+         Offset(c.dx, c.dy),
+         [
+           Colors.white.withValues(alpha: 0.8),
+           Colors.white.withValues(alpha: 0.0),
+         ]
+       )
+       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
+     
+     final rimPaint = Paint()
+       ..color = Colors.white.withValues(alpha: 0.5)
+       ..style = PaintingStyle.stroke
+       ..strokeWidth = 2.0;
+
+     canvas.drawCircle(c + d1, r1, highlight);
+     canvas.drawCircle(c + d2, r2, highlight);
+     canvas.drawCircle(c + d3, r3, highlight);
+     
+     canvas.drawCircle(c + d1, r1 - 1, rimPaint);
+     canvas.drawCircle(c + d2, r2 - 1, rimPaint);
+     canvas.drawCircle(c + d3, r3 - 1, rimPaint);
   }
 
   @override

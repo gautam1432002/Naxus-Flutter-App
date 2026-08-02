@@ -1,6 +1,8 @@
 import 'dart:ui';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'glass_container.dart';
 
 class CardThemeInfo {
   final Color primaryColor;
@@ -73,22 +75,14 @@ class CarouselCard extends StatelessWidget {
             ),
           ),
           // Main Liquid Glass Card
-          ClipRRect(
+          GlassContainer(
             borderRadius: BorderRadius.circular(32),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 12 * activeFocus, sigmaY: 12 * activeFocus),
-              child: Container(
-                width: double.infinity,
-                height: double.infinity,
-                decoration: BoxDecoration(
-                  color: info.primaryColor.withValues(alpha: 0.1 + (0.15 * activeFocus)), // Fully filled colored glass effect
-                  borderRadius: BorderRadius.circular(32),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.15 + (0.2 * activeFocus)),
-                    width: 0.5, // Thinner, elegant border
-                  ),
-                ),
-                child: Stack(
+            blurSigma: 12 * activeFocus,
+            width: double.infinity,
+            height: double.infinity,
+            overlayColor: info.primaryColor.withValues(alpha: 0.1 + (0.15 * activeFocus)),
+            borderColor: Colors.white.withValues(alpha: 0.15 + (0.2 * activeFocus)),
+            child: Stack(
                   children: [
                     // Inner Top Reflection
                     Positioned(
@@ -211,37 +205,22 @@ class CarouselCard extends StatelessWidget {
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              ClipRRect(
+                              GlassContainer(
                                 borderRadius: BorderRadius.circular(18),
-                                child: BackdropFilter(
-                                  filter: ImageFilter.blur(sigmaX: 6 * activeFocus, sigmaY: 6 * activeFocus),
-                                  child: Container(
-                                    width: 60,
-                                    height: 60,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(18),
-                                      border: Border.all(
-                                        color: Colors.white.withValues(alpha: 0.2),
-                                        width: 0.5,
-                                      ),
-                                    ),
-                                    child: Icon(info.icon, color: Colors.white.withValues(alpha: 0.95), size: 28),
-                                  ),
-                                ),
+                                blurSigma: 6 * activeFocus,
+                                width: 60,
+                                height: 60,
+                                overlayColor: Colors.white.withValues(alpha: 0.1),
+                                borderColor: Colors.white.withValues(alpha: 0.2),
+                                child: Icon(info.icon, color: Colors.white.withValues(alpha: 0.95), size: 28),
                               ),
-                              ClipRRect(
+                              GlassContainer(
                                 borderRadius: BorderRadius.circular(40),
-                                child: BackdropFilter(
-                                  filter: ImageFilter.blur(sigmaX: 6 * activeFocus, sigmaY: 6 * activeFocus),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(40),
-                                      border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 0.5),
-                                      color: Colors.white.withValues(alpha: 0.1),
-                                    ),
-                                    child: Row(
+                                blurSigma: 6 * activeFocus,
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                                overlayColor: Colors.white.withValues(alpha: 0.1),
+                                borderColor: Colors.white.withValues(alpha: 0.2),
+                                child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         if (info.badgeText == 'Live') ...[
@@ -269,8 +248,6 @@ class CarouselCard extends StatelessWidget {
                                         ),
                                       ],
                                     ),
-                                  ),
-                                ),
                               ),
                             ],
                           ),
@@ -325,18 +302,13 @@ class CarouselCard extends StatelessWidget {
                                     ],
                                   ),
                                 ),
-                                ClipRRect(
+                                GlassContainer(
                                   borderRadius: BorderRadius.circular(40),
-                                  child: BackdropFilter(
-                                    filter: ImageFilter.blur(sigmaX: 6 * activeFocus, sigmaY: 6 * activeFocus),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 5),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(40),
-                                        border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 0.5),
-                                      ),
-                                      child: Text(
+                                  blurSigma: 6 * activeFocus,
+                                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 5),
+                                  overlayColor: Colors.white.withValues(alpha: 0.1),
+                                  borderColor: Colors.white.withValues(alpha: 0.2),
+                                  child: Text(
                                         info.actionHint,
                                         style: const TextStyle(
                                           color: Colors.white,
@@ -344,8 +316,6 @@ class CarouselCard extends StatelessWidget {
                                           fontWeight: FontWeight.w600,
                                         ),
                                       ),
-                                    ),
-                                  ),
                                 ),
                               ],
                             ),
@@ -355,8 +325,6 @@ class CarouselCard extends StatelessWidget {
                     ),
                   ],
                 ),
-              ),
-            ),
           ),
         ],
       ),

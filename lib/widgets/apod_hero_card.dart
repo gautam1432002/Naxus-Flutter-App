@@ -1,10 +1,11 @@
-import 'dart:ui';
+import 'package:flutter/material.dart';
 import 'package:flutter/material.dart';
 import '../models/apod_model.dart';
 import '../theme/app_theme.dart';
 import 'fullscreen_image_viewer.dart';
 import 'apod_video_player.dart';
 import 'package:animations/animations.dart';
+import 'glass_container.dart';
 
 class ApodHeroCard extends StatelessWidget {
   final ApodModel apod;
@@ -51,16 +52,12 @@ class ApodHeroCard extends StatelessWidget {
           snap: true,
           snapSizes: const [0.6, 0.95],
           builder: (context, scrollController) {
-            return ClipRRect(
+            return GlassContainer(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                child: Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF0F172A).withValues(alpha: 0.12),
-                    border: Border(top: BorderSide(color: Colors.white.withValues(alpha: 0.15), width: 1)),
-                  ),
-                  child: ListView(
+              blurSigma: 12.0,
+              overlayColor: const Color(0xFF0F172A).withValues(alpha: 0.12),
+              borderColor: Colors.white.withValues(alpha: 0.15),
+              child: ListView(
                     controller: scrollController,
                     padding: const EdgeInsets.all(28),
                     children: [
@@ -120,8 +117,6 @@ class ApodHeroCard extends StatelessWidget {
                       const SizedBox(height: 48),
                     ],
                   ),
-                ),
-              ),
             );
           },
         );
@@ -143,11 +138,12 @@ class ApodHeroCard extends StatelessWidget {
         border: Border.all(color: Colors.white.withValues(alpha: 0.05), width: 1.0),
         boxShadow: AppTheme.bentoShadow,
       ),
-      child: ClipRRect(
+      child: GlassContainer(
         borderRadius: BorderRadius.circular(26.5),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: Stack(
+        blurSigma: 8.0,
+        overlayColor: Colors.transparent,
+        borderColor: Colors.transparent,
+        child: Stack(
           children: [
             // Image / Video Content
             Positioned.fill(
@@ -337,7 +333,6 @@ class ApodHeroCard extends StatelessWidget {
             ),
           ],
         ),
-      ),
       ),
     );
   }

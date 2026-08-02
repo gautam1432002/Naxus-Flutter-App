@@ -1,4 +1,4 @@
-import 'dart:ui';
+import 'package:flutter/material.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
@@ -10,6 +10,7 @@ import '../widgets/tactile_glass_button.dart';
 import '../widgets/nexus_universal_header.dart';
 import '../services/app_data_store.dart';
 import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
+import '../widgets/glass_container.dart';
 
 class EchoesScreen extends StatefulWidget {
   const EchoesScreen({super.key});
@@ -407,11 +408,12 @@ class _ChronoSpineRow extends StatelessWidget {
                       )
                     ],
                   ),
-                  child: ClipRRect(
+                  child: GlassContainer(
                     borderRadius: BorderRadius.circular(28),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                      child: AnimatedSize(
+                    blurSigma: 8.0,
+                    overlayColor: Colors.transparent,
+                    borderColor: Colors.transparent,
+                    child: AnimatedSize(
                         duration: const Duration(milliseconds: 350),
                         curve: Curves.easeInOutCubic,
                         alignment: Alignment.topCenter,
@@ -493,7 +495,6 @@ class _ChronoSpineRow extends StatelessWidget {
                             ],
                           ),
                         ),
-                      ),
                     ),
                   ),
                 ),

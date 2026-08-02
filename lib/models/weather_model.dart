@@ -9,6 +9,7 @@ class WeatherModel {
   final double uvIndexMax;
   final String sunrise;
   final String sunset;
+  final bool isDay;
 
   WeatherModel({
     required this.temperature,
@@ -19,6 +20,7 @@ class WeatherModel {
     required this.uvIndexMax,
     required this.sunrise,
     required this.sunset,
+    required this.isDay,
   });
 
   factory WeatherModel.fromJson(Map<String, dynamic> json) {
@@ -39,6 +41,7 @@ class WeatherModel {
       uvIndexMax: (uvIndexList != null && uvIndexList.isNotEmpty) ? (uvIndexList[0] as num).toDouble() : 0.0,
       sunrise: (sunriseList != null && sunriseList.isNotEmpty) ? sunriseList[0].toString() : '',
       sunset: (sunsetList != null && sunsetList.isNotEmpty) ? sunsetList[0].toString() : '',
+      isDay: (current['is_day'] as num?)?.toInt() == 1,
     );
   }
 

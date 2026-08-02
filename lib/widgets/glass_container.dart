@@ -1,0 +1,72 @@
+import 'dart:ui';
+import 'package:flutter/material.dart';
+
+class GlassConfig {
+  // MASTER SWITCH: Turn false to instantly disable all blur for performance testing
+  static const bool enableBlur = false; 
+  
+  // GLOBAL GLASS TWEAKS
+  static const double blurSigma = 1.0; // Standardized to 8.0 to match existing UI
+  static final Color overlayColor = Colors.white.withValues(alpha: 0.20);
+  static final Color borderColor = Colors.white.withValues(alpha: 0.20);
+}
+
+class GlassContainer extends StatelessWidget {
+  final Widget child;
+  final double? width;
+  final double? height;
+  final EdgeInsetsGeometry? padding;
+  final BorderRadius? borderRadius;
+  
+  // Optional overrides
+  final double? blurSigma;
+  final Color? overlayColor;
+  final Color? borderColor;
+
+  const GlassContainer({
+    super.key,
+    required this.child,
+    this.width,
+    this.height,
+    this.padding,
+    this.borderRadius,
+    this.blurSigma,
+    this.overlayColor,
+    this.borderColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final radius = borderRadius ?? BorderRadius.circular(16);
+    final sigma = blurSigma ?? GlassConfig.blurSigma;
+    final bg = overlayColor ?? GlassConfig.overlayColor;
+    final border = borderColor ?? GlassConfig.borderColor;
+
+    Widget container = Container(
+      width: width,
+      height: height,
+      padding: padding,
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: radius,
+        border: Border.all(color: border, width: 1.0),
+      ),
+      child: child,
+    );
+
+    if (!GlassConfig.enableBlur) {
+      return ClipRRect(
+        borderRadius: radius,
+        child: container,
+      );
+    }
+
+    return ClipRRect(
+      borderRadius: radius,
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+        child: container,
+      ),
+    );
+  }
+}

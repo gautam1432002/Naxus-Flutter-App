@@ -7,14 +7,12 @@ import '../theme/app_theme.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/error_state.dart';
 import '../widgets/apod_hero_card.dart';
-import 'apod_detail_screen.dart';
 import '../services/app_data_store.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
-import 'package:animations/animations.dart';
 import 'package:flutter/services.dart';
-import 'dart:ui';
+import 'dart:async';
 import '../widgets/tactile_glass_button.dart';
 import '../widgets/nexus_universal_header.dart';
+import '../widgets/glass_container.dart';
 
 class CosmicLensScreen extends StatefulWidget {
   const CosmicLensScreen({super.key});
@@ -41,10 +39,11 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
 
   Future<void> _loadData() async {
     final store = AppDataStore();
-    if (store.todayApod != null) {
+    if (store.todayApod != null && store.previousApods != null) {
       if (mounted) {
         setState(() {
           _todayApod = store.todayApod;
+          _previousApods = store.previousApods!.where((a) => a.date != _todayApod!.date).toList();
           _isLoading = false;
         });
       }
@@ -67,9 +66,10 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
           final rangeResult = results[1] as DataResult<List<ApodModel>>;
           
           _todayApod = todayResult.data;
+          store.todayApod = _todayApod;
           
-          // Filter out today's APOD in case of timezone overlap
           final allPrevious = rangeResult.data;
+          store.previousApods = allPrevious;
           _previousApods = allPrevious.where((a) => a.date != _todayApod!.date).toList();
           
           _isOffline = todayResult.isOffline || rangeResult.isOffline;
@@ -77,7 +77,7 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
         });
       }
     } catch (e) {
-      if (mounted) {
+      if (mounted && _todayApod == null) {
         setState(() {
           _error = e.toString();
           _isLoading = false;
@@ -87,129 +87,142 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
   }
 
   Widget _buildGridCard(ApodModel apod, double height) {
-    return OpenContainer(
-      transitionType: ContainerTransitionType.fade,
-      transitionDuration: const Duration(milliseconds: 600),
-      openBuilder: (context, _) => ApodDetailScreen(apod: apod),
-      closedElevation: 0,
-      closedShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      closedColor: Colors.transparent,
-      openColor: Colors.transparent,
-      middleColor: Colors.transparent,
-      closedBuilder: (context, openContainer) {
-        return GestureDetector(
-          onTap: openContainer,
-          child: Container(
-            height: height,
-            decoration: BoxDecoration(
-              color: const Color(0xFF1E293B).withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.0),
-              boxShadow: AppTheme.bentoShadow,
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    if (apod.isVideo) ...[
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(16.0),
-                        child: Image.network(
-                          apod.youtubeThumbnail ?? 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop',
-                          cacheWidth: 1080,
-                          fit: BoxFit.cover,
-                        ),
-                      ),
-                      Center(
-                        child: Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.5),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-                          ),
-                          child: const Icon(Icons.play_arrow, color: Colors.white, size: 36),
-                        ),
-                      ),
-                    ] else
-                      Hero(
-                        tag: 'apod_hero_${apod.date}',
-                        flightShuttleBuilder: (flightContext, animation, flightDirection, fromHeroContext, toHeroContext) {
-                          return ClipRRect(
-                            borderRadius: BorderRadius.circular(16.0),
-                            child: toHeroContext.widget,
-                          );
-                        },
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(16.0),
-                          child: Image.network(
-                            apod.url,
-                            cacheWidth: 1080,
-                            fit: BoxFit.cover,
-                            frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                              if (wasSynchronouslyLoaded) return child;
-                              return AnimatedOpacity(
-                                opacity: frame == null ? 0 : 1,
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeInOut,
-                                child: child,
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                    Positioned(
-                      bottom: 0, left: 0, right: 0,
-                      height: height * 0.7,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Colors.transparent, const Color(0xFF0A0E27).withValues(alpha: 0.95)],
-                          ),
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 16, left: 16, right: 16,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-                            ),
-                            child: const Text('Archive', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            apod.title,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, height: 1.2),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            apod.date,
-                            style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+    return GestureDetector(
+      onTap: () {
+        HapticFeedback.lightImpact();
+        showGeneralDialog(
+          context: context,
+          barrierDismissible: true,
+          barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+          barrierColor: Colors.black.withValues(alpha: 0.6),
+          transitionDuration: const Duration(milliseconds: 300),
+          pageBuilder: (context, animation, secondaryAnimation) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                child: Material(
+                  type: MaterialType.transparency,
+                  child: ApodHeroCard(
+                    apod: apod,
+                    isLive: false,
+                    heroTag: 'apod_dialog_${apod.date}',
+                  ),
                 ),
               ),
-            ),
-          ),
+            );
+          },
+          transitionBuilder: (context, animation, secondaryAnimation, child) {
+            final curvedAnimation = CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+            return ScaleTransition(
+              scale: Tween<double>(begin: 0.95, end: 1.0).animate(curvedAnimation),
+              child: FadeTransition(
+                opacity: curvedAnimation,
+                child: child,
+              ),
+            );
+          },
         );
       },
+      child: Container(
+        height: height,
+        decoration: BoxDecoration(
+          color: const Color(0xFF1E293B).withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1), width: 1.0),
+          boxShadow: AppTheme.bentoShadow,
+        ),
+        child: GlassContainer(
+          borderRadius: BorderRadius.circular(16),
+          blurSigma: 8.0,
+          overlayColor: Colors.transparent,
+          borderColor: Colors.transparent,
+          child: Stack(
+              fit: StackFit.expand,
+              children: [
+                if (apod.isVideo) ...[
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16.0),
+                    child: Image.network(
+                      apod.youtubeThumbnail ?? 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop',
+                      cacheWidth: 1080,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.5),
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                      ),
+                      child: const Icon(Icons.play_arrow, color: Colors.white, size: 36),
+                    ),
+                  ),
+                ] else
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16.0),
+                    child: Image.network(
+                      apod.url,
+                      cacheWidth: 1080,
+                      fit: BoxFit.cover,
+                      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                        if (wasSynchronouslyLoaded) return child;
+                        return AnimatedOpacity(
+                          opacity: frame == null ? 0 : 1,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                          child: child,
+                        );
+                      },
+                    ),
+                  ),
+                Positioned(
+                  bottom: 0, left: 0, right: 0,
+                  height: height * 0.7,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [Colors.transparent, const Color(0xFF0A0E27).withValues(alpha: 0.95)],
+                      ),
+                    ),
+                  ),
+                ),
+                Positioned(
+                  bottom: 16, left: 16, right: 16,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+                        ),
+                        child: const Text('Archive', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        apod.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16, height: 1.2),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        apod.date,
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+        ),
+      ),
     );
   }
 
@@ -333,32 +346,19 @@ class _CosmicLensScreenState extends State<CosmicLensScreen> {
                         const SizedBox(height: 16),
                         
                         // Grid
-                        AnimationLimiter(
-                          child: GridView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            itemCount: _previousApods.length,
-                            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              mainAxisSpacing: 16,
-                              crossAxisSpacing: 16,
-                              childAspectRatio: 0.8,
-                            ),
-                            itemBuilder: (context, index) {
-                              return AnimationConfiguration.staggeredGrid(
-                                position: index,
-                                duration: const Duration(milliseconds: 400),
-                                columnCount: 2,
-                                child: ScaleAnimation(
-                                  scale: 0.9,
-                                  curve: Curves.easeOutCubic,
-                                  child: FadeInAnimation(
-                                    child: _buildGridCard(_previousApods[index], 250),
-                                  ),
-                                ),
-                              );
-                            },
+                        GridView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: _previousApods.length,
+                          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 16,
+                            crossAxisSpacing: 16,
+                            childAspectRatio: 0.8,
                           ),
+                          itemBuilder: (context, index) {
+                            return _buildGridCard(_previousApods[index], 250);
+                          },
                         ),
                       ],
                       const SizedBox(height: 32),

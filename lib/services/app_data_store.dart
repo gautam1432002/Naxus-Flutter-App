@@ -22,6 +22,7 @@ class AppDataStore {
 
   // Cached data fields
   ApodModel? todayApod;
+  List<ApodModel>? previousApods;
   IssModel? issPosition;
   AirQualityModel? airQuality;
   WeatherModel? weather;
@@ -43,8 +44,12 @@ class AppDataStore {
     // 1. Fetch Location independent data
     final Future<void> fetchNasa = () async {
       try {
-        final res = await nasaService.fetchApod();
-        todayApod = res.data;
+        final results = await Future.wait([
+          nasaService.fetchApod(),
+          nasaService.fetchApodRange(),
+        ]);
+        todayApod = (results[0] as DataResult<ApodModel>).data;
+        previousApods = (results[1] as DataResult<List<ApodModel>>).data;
       } catch (e) {
         // Silently ignore prefetch failures
       }

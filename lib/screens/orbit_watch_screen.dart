@@ -3,7 +3,7 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../theme/app_theme.dart';
+
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/iss_model.dart';
@@ -15,6 +15,7 @@ import '../widgets/tactile_glass_button.dart';
 import '../widgets/nexus_universal_header.dart';
 import '../services/app_data_store.dart';
 import 'fullscreen_map_screen.dart';
+import '../widgets/glass_container.dart';
 
 class OrbitWatchScreen extends StatefulWidget {
   const OrbitWatchScreen({super.key});
@@ -176,55 +177,71 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
   String _formatLat(double lat) => '${lat.abs().toStringAsFixed(4)}° ${lat >= 0 ? 'N' : 'S'}';
   String _formatLng(double lng) => '${lng.abs().toStringAsFixed(4)}° ${lng >= 0 ? 'E' : 'W'}';
 
-  Widget _buildBentoCell(String label, IconData icon, double value, String Function(double) formatter) {
-    return Container(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        color: Colors.white.withValues(alpha: 0.05),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1.0),
-        boxShadow: AppTheme.bentoShadow,
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildBentoCellList(String label, IconData icon, double value, String Function(double) formatter) {
+    return GlassContainer(
+      borderRadius: BorderRadius.circular(16),
+      blurSigma: 8.0,
+      overlayColor: Colors.white.withValues(alpha: 0.05),
+      borderColor: Colors.white.withValues(alpha: 0.2),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    Icon(icon, size: 14, color: const Color(0xFF06B6D4)),
-                    const SizedBox(width: 6),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontWeight: FontWeight.w800,
-                        fontSize: 11,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                TweenAnimationBuilder<double>(
-                  tween: Tween<double>(begin: value, end: value),
-                  duration: const Duration(milliseconds: 750),
-                  curve: Curves.easeOutCubic,
-                  builder: (context, val, child) {
-                    return Text(
-                      formatter(val),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    );
-                  },
+                Icon(icon, size: 18, color: const Color(0xFF06B6D4)),
+                const SizedBox(width: 12),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 12,
+                    letterSpacing: 1.0,
+                  ),
                 ),
               ],
+            ),
+            TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: value, end: value),
+              duration: const Duration(milliseconds: 750),
+              curve: Curves.easeOutCubic,
+              builder: (context, val, child) {
+                return Text(
+                  formatter(val),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompass() {
+    return SizedBox(
+      width: 48,
+      height: 48,
+      child: GlassContainer(
+        borderRadius: BorderRadius.circular(24),
+        blurSigma: 8.0,
+        overlayColor: Colors.black.withValues(alpha: 0.2),
+        borderColor: Colors.white.withValues(alpha: 0.2),
+        child: Center(
+          child: AnimatedRotation(
+            turns: _issHeading / 360.0,
+            duration: const Duration(milliseconds: 1500),
+            curve: Curves.easeOutExpo,
+            child: const Icon(
+              Icons.navigation,
+              color: Color(0xFF06B6D4),
+              size: 22,
             ),
           ),
         ),
@@ -246,7 +263,7 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
       ),
       children: [
         TileLayer(
-          urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+          urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
           subdomains: const ['a', 'b', 'c', 'd'],
           userAgentPackageName: 'com.example.nexus',
         ),
@@ -383,27 +400,42 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                                 child: Container(
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(36),
-                                    color: Colors.white.withValues(alpha: 0.05),
-                                    border: Border.all(
-                                      color: (_isReconnecting ? const Color(0xFFF59E0B) : const Color(0xFF06B6D4)).withValues(alpha: 0.3), 
-                                      width: 1.5,
-                                    ),
-                                    boxShadow: AppTheme.bentoShadow,
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF06B6D4).withValues(alpha: 0.15),
+                                        blurRadius: 32,
+                                        spreadRadius: -4,
+                                        offset: const Offset(0, 16),
+                                      ),
+                                    ],
                                   ),
-                                  child: ClipRRect(
+                                  child: GlassContainer(
                                     borderRadius: BorderRadius.circular(36),
-                                    child: BackdropFilter(
-                                      filter: ui.ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-                                      child: _isLoading 
-                                          ? const SkeletonLoader(width: double.infinity, height: double.infinity)
-                                          : _error != null && _issPosition == null
-                                              ? ErrorState(
-                                                  accentColor: const Color(0xFF06B6D4),
-                                                  message: _error!,
-                                                  onRetry: _initFetch,
-                                                )
-                                              : _buildMap(),
-                                    ),
+                                    blurSigma: 8.0,
+                                    overlayColor: Colors.white.withValues(alpha: 0.05),
+                                    borderColor: (_isReconnecting ? const Color(0xFFF59E0B) : const Color(0xFF06B6D4)).withValues(alpha: 0.3),
+                                    child: _isLoading 
+                                            ? const SkeletonLoader(width: double.infinity, height: double.infinity)
+                                            : _error != null && _issPosition == null
+                                                ? ErrorState(
+                                                    accentColor: const Color(0xFF06B6D4),
+                                                    message: _error!,
+                                                    onRetry: _initFetch,
+                                                  )
+                                                : Stack(
+                                                    children: [
+                                                      ClipRRect(
+                                                        borderRadius: BorderRadius.circular(36),
+                                                        child: _buildMap(),
+                                                      ),
+                                                      if (_issPosition != null)
+                                                        Positioned(
+                                                          top: 16,
+                                                          left: 16,
+                                                          child: _buildCompass(),
+                                                        ),
+                                                    ],
+                                                  ),
                                   ),
                                 ),
                               ),
@@ -411,7 +443,6 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                           ),
                         ),
                       ),
-                      
                       const SliverToBoxAdapter(child: SizedBox(height: 24)),
                       
                       // Telemetry Deck
@@ -420,21 +451,13 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                           padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
                           sliver: SliverList(
                             delegate: SliverChildListDelegate([
-                              Row(
-                                children: [
-                                  Expanded(child: _buildBentoCell('LATITUDE', Icons.explore, _issPosition!.latitude, _formatLat)),
-                                  const SizedBox(width: 16),
-                                  Expanded(child: _buildBentoCell('LONGITUDE', Icons.public, _issPosition!.longitude, _formatLng)),
-                                ],
-                              ),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(child: _buildBentoCell('ALTITUDE', Icons.height, _issPosition!.altitude, (val) => '${val.toStringAsFixed(1)} km')),
-                                  const SizedBox(width: 16),
-                                  Expanded(child: _buildBentoCell('VELOCITY', Icons.speed, _issPosition!.velocity, (val) => '${val.toStringAsFixed(0)} km/h')),
-                                ],
-                              ),
+                              _buildBentoCellList('LATITUDE', Icons.explore, _issPosition!.latitude, _formatLat),
+                              const SizedBox(height: 12),
+                              _buildBentoCellList('LONGITUDE', Icons.public, _issPosition!.longitude, _formatLng),
+                              const SizedBox(height: 12),
+                              _buildBentoCellList('ALTITUDE', Icons.height, _issPosition!.altitude, (val) => '${val.toStringAsFixed(1)} km'),
+                              const SizedBox(height: 12),
+                              _buildBentoCellList('VELOCITY', Icons.speed, _issPosition!.velocity, (val) => '${val.toStringAsFixed(0)} km/h'),
                             ]),
                           ),
                         ),
@@ -526,126 +549,16 @@ class _SpacePainter extends CustomPainter {
 
   _SpacePainter({required this.time});
 
-  void _drawSparkle(Canvas canvas, Offset center, double size, double opacity) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: opacity);
-    final path = ui.Path();
-    path.moveTo(center.dx, center.dy - size);
-    path.quadraticBezierTo(center.dx, center.dy, center.dx + size, center.dy);
-    path.quadraticBezierTo(center.dx, center.dy, center.dx, center.dy + size);
-    path.quadraticBezierTo(center.dx, center.dy, center.dx - size, center.dy);
-    path.quadraticBezierTo(center.dx, center.dy, center.dx, center.dy - size);
-    canvas.drawPath(path, paint);
-  }
-
   void _drawSatellite(Canvas canvas, Offset center, double rotation) {
     canvas.save();
     canvas.translate(center.dx, center.dy);
     canvas.rotate(rotation);
+    canvas.scale(0.35); // Scale down the ISS shape to act as a generic satellite
     
-    final bodyPaint = Paint()..color = Colors.white.withValues(alpha: 0.8);
-    final panelPaint = Paint()..color = const Color(0xFF06B6D4).withValues(alpha: 0.6);
-    final linePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.5)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-
-    // Solar panels
-    canvas.drawRect(Rect.fromCenter(center: const Offset(-15, 0), width: 12, height: 8), panelPaint);
-    canvas.drawRect(Rect.fromCenter(center: const Offset(15, 0), width: 12, height: 8), panelPaint);
+    // Draw it with a semi-transparent cyan tint for the hologram/background effect
+    final Paint overridePaint = Paint()..color = const Color(0xFF06B6D4).withValues(alpha: 0.4);
+    _drawISSStationShapes(canvas, overridePaint);
     
-    // Truss/Connection
-    canvas.drawLine(const Offset(-15, 0), const Offset(15, 0), linePaint);
-    
-    // Main Body
-    canvas.drawRect(Rect.fromCenter(center: Offset.zero, width: 8, height: 12), bodyPaint);
-    
-    // Antenna dish
-    canvas.drawArc(
-      Rect.fromCenter(center: const Offset(0, 8), width: 10, height: 10),
-      0, math.pi, false, linePaint..strokeWidth = 1.5
-    );
-    canvas.restore();
-  }
-
-  void _drawRocket(Canvas canvas, Offset center, double rotation) {
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(rotation);
-
-    final bodyPaint = Paint()..color = Colors.white.withValues(alpha: 0.9);
-    final windowPaint = Paint()..color = const Color(0xFF06B6D4);
-    final flamePaint = Paint()
-      ..shader = ui.Gradient.radial(const Offset(0, 15), 10, [
-        const Color(0xFFF59E0B),
-        const Color(0xFFF59E0B).withValues(alpha: 0.0)
-      ]);
-
-    // Body
-    final path = ui.Path();
-    path.moveTo(0, -15); // Nose
-    path.lineTo(6, -5);
-    path.lineTo(6, 10);
-    path.lineTo(-6, 10);
-    path.lineTo(-6, -5);
-    path.close();
-    canvas.drawPath(path, bodyPaint);
-
-    // Fins
-    final finPath = ui.Path();
-    finPath.moveTo(6, 5);
-    finPath.lineTo(12, 12);
-    finPath.lineTo(6, 12);
-    finPath.close();
-    finPath.moveTo(-6, 5);
-    finPath.lineTo(-12, 12);
-    finPath.lineTo(-6, 12);
-    finPath.close();
-    canvas.drawPath(finPath, bodyPaint);
-
-    // Window
-    canvas.drawCircle(const Offset(0, -2), 2.5, windowPaint);
-
-    // Flame
-    canvas.drawCircle(const Offset(0, 15), 8 + 2 * math.sin(time * 50), flamePaint);
-
-    canvas.restore();
-  }
-
-  void _drawAntenna(Canvas canvas, Offset center) {
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-
-    final bodyPaint = Paint()..color = Colors.white.withValues(alpha: 0.7);
-    final linePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.5)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2.0;
-
-    // Base
-    canvas.drawLine(const Offset(0, 0), const Offset(0, 15), linePaint);
-    canvas.drawLine(const Offset(-10, 15), const Offset(10, 15), linePaint);
-    
-    // Dish
-    final dishPath = ui.Path();
-    dishPath.moveTo(-15, -5);
-    dishPath.quadraticBezierTo(0, 10, 15, -5);
-    canvas.drawPath(dishPath, linePaint);
-
-    // Receiver
-    canvas.drawLine(const Offset(0, 0), const Offset(0, -10), linePaint..strokeWidth = 1.0);
-    canvas.drawCircle(const Offset(0, -10), 2, bodyPaint);
-
-    // Signals
-    final signalPhase = (time * 15) % 1.0;
-    if (signalPhase > 0.5) {
-      final signalPaint = Paint()
-        ..color = const Color(0xFF06B6D4).withValues(alpha: 0.6)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5;
-      canvas.drawArc(Rect.fromCenter(center: const Offset(0, -10), width: 16, height: 16), -math.pi * 0.75, math.pi * 0.5, false, signalPaint);
-      canvas.drawArc(Rect.fromCenter(center: const Offset(0, -10), width: 24, height: 24), -math.pi * 0.75, math.pi * 0.5, false, signalPaint);
-    }
-
     canvas.restore();
   }
 
@@ -675,71 +588,6 @@ class _SpacePainter extends CustomPainter {
       ..color = const Color(0xFF8B5CF6).withValues(alpha: 0.12)
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 120);
     canvas.drawCircle(Offset(size.width * 0.8, size.height * 0.8), 250, nebula2);
-
-    // Planet
-    final planetPaint = Paint()
-      ..shader = ui.Gradient.radial(
-        Offset(size.width * 0.85, size.height * 0.15),
-        40,
-        [const Color(0xFF334155), const Color(0xFF0F172A)],
-      );
-    canvas.drawCircle(Offset(size.width * 0.85, size.height * 0.15), 40, planetPaint);
-    
-    // Planet Ring
-    final ringPaint = Paint()
-      ..color = const Color(0xFF94A3B8).withValues(alpha: 0.3)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 4.0;
-    canvas.save();
-    canvas.translate(size.width * 0.85, size.height * 0.15);
-    canvas.rotate(math.pi * 0.2);
-    canvas.drawOval(Rect.fromCenter(center: Offset.zero, width: 120, height: 30), ringPaint);
-    canvas.restore();
-
-    // Custom Sparkle Stars
-    final random = math.Random(42);
-    for (int i = 0; i < 20; i++) {
-      final x = random.nextDouble() * size.width;
-      final y = random.nextDouble() * size.height;
-      final maxOpacity = random.nextDouble() * 0.8 + 0.2;
-      final phase = random.nextDouble() * 2 * math.pi;
-      
-      final currentOpacity = maxOpacity * (0.5 + 0.5 * math.sin(time * math.pi * 10 + phase));
-      _drawSparkle(canvas, Offset(x, y), random.nextDouble() * 6 + 4, currentOpacity);
-    }
-    
-    // Normal small dots for background fill
-    final starPaint = Paint()..color = Colors.white;
-    for (int i = 0; i < 80; i++) {
-      final x = random.nextDouble() * size.width;
-      final y = random.nextDouble() * size.height;
-      final currentOpacity = 0.5 * (0.5 + 0.5 * math.sin(time * math.pi * 10 + random.nextDouble() * 2 * math.pi));
-      starPaint.color = Colors.white.withValues(alpha: currentOpacity);
-      canvas.drawCircle(Offset(x, y), random.nextDouble() * 1.5, starPaint);
-    }
-
-    // Space Antenna
-    _drawAntenna(canvas, Offset(size.width * 0.15, size.height * 0.8));
-
-    // Rocket (Moves diagonally)
-    final rocketProgress = (time * 1.5) % 1.0;
-    final rocketX = size.width * -0.2 + (size.width * 1.4 * rocketProgress);
-    final rocketY = size.height * 1.2 - (size.height * 1.4 * rocketProgress);
-    _drawRocket(canvas, Offset(rocketX, rocketY), math.pi * 0.25);
-
-    // Shooting Star
-    final cometProgress = (time * 3.0 + 0.5) % 1.0;
-    final cometX = size.width * 1.2 - (size.width * 1.4 * cometProgress);
-    final cometY = size.height * -0.2 + (size.height * 1.4 * cometProgress);
-    final cometPaint = Paint()
-      ..shader = ui.Gradient.linear(
-        Offset(cometX, cometY),
-        Offset(cometX + 60, cometY - 60),
-        [Colors.white, Colors.white.withValues(alpha: 0.0)],
-      )
-      ..strokeWidth = 2.0;
-    canvas.drawLine(Offset(cometX, cometY), Offset(cometX + 60, cometY - 60), cometPaint);
-    canvas.drawCircle(Offset(cometX, cometY), 2.0, Paint()..color = Colors.white);
 
     // Orbital Paths
     final orbitPaint = Paint()
@@ -849,16 +697,20 @@ class _ISSPainter extends CustomPainter {
     // Draw shadow first by shifting
     canvas.save();
     canvas.translate(2, 3);
-    _drawStationShapes(canvas, shadowPaint);
+    _drawISSStationShapes(canvas, shadowPaint);
     canvas.restore();
 
     // Now draw the actual colored station
-    _drawStationShapes(canvas, null);
+    _drawISSStationShapes(canvas, null);
 
     canvas.restore();
   }
 
-  void _drawStationShapes(Canvas canvas, Paint? overridePaint) {
+  @override
+  bool shouldRepaint(covariant _ISSPainter oldDelegate) => false;
+}
+
+void _drawISSStationShapes(Canvas canvas, Paint? overridePaint) {
     // Materials
     final greyPaint = overridePaint ?? (Paint()..color = const Color(0xFF9CA3AF));
     final lightGreyPaint = overridePaint ?? (Paint()..color = const Color(0xFFE5E7EB));
@@ -947,8 +799,4 @@ class _ISSPainter extends CustomPainter {
     nozzlePath.lineTo(27, 1.5);
     nozzlePath.close();
     canvas.drawPath(nozzlePath, darkGreyPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _ISSPainter oldDelegate) => false;
 }
