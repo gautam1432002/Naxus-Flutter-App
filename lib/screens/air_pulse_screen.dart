@@ -1,11 +1,5 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'dart:ui' as ui;
-import 'dart:math' as math;
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:animations/animations.dart';
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 import '../models/air_quality_model.dart';
 import '../models/weather_model.dart';
@@ -14,22 +8,12 @@ import '../models/data_result.dart';
 
 import '../services/air_quality_service.dart';
 import '../services/weather_service.dart';
-import '../services/geocoding_service.dart';
 import '../services/location_storage_service.dart';
+import '../services/geocoding_service.dart';
 
-import '../widgets/skeleton_loader.dart';
-import '../widgets/error_state.dart';
-import '../widgets/tactile_glass_button.dart';
-import '../widgets/nexus_universal_header.dart';
-import '../widgets/weather_illustration.dart';
-import '../services/app_data_store.dart';
 import '../widgets/glass_container.dart';
-import '../widgets/animated_number_counter.dart';
-import '../widgets/interactive_3d_card.dart';
-import '../widgets/weather_particle_system.dart';
-import '../widgets/breathing_aqi_ring.dart';
-
-enum ActiveDashboardCard { weather, aqi }
+import '../widgets/weather_illustration.dart';
+import '../widgets/static_discover_cloud.dart';
 
 class AirPulseScreen extends StatefulWidget {
   const AirPulseScreen({super.key});
@@ -38,39 +22,55 @@ class AirPulseScreen extends StatefulWidget {
   State<AirPulseScreen> createState() => _AirPulseScreenState();
 }
 
-class _AirPulseScreenState extends State<AirPulseScreen> {
-  bool get _isDay => _weather?.isDay ?? true;
-  Color get _primaryText => _isDay ? const Color(0xFF0F172A) : Colors.white;
-  Color get _secondaryText => _isDay ? const Color(0xFF64748B) : Colors.white70;
-
-
-  final AirQualityService _airQualityService = AirQualityService();
+class _AirPulseScreenState extends State<AirPulseScreen> with TickerProviderStateMixin {
   final WeatherService _weatherService = WeatherService();
+  final AirQualityService _airQualityService = AirQualityService();
   final LocationStorageService _locationStorageService = LocationStorageService();
+  final GeocodingService _geocodingService = GeocodingService();
 
   LocationModel? _currentLocation;
-  List<LocationModel> _savedLocations = [];
-
-  AirQualityModel? _airQuality;
   WeatherModel? _weather;
+  AirQualityModel? _airQuality;
+  List<LocationModel> _savedLocations = [];
+  
   bool _isLoading = true;
-  bool _isOffline = false;
-  String? _error;
-  ActiveDashboardCard _activeCard = ActiveDashboardCard.aqi;
+
+  late AnimationController _floatController;
+  late Animation<Offset> _floatAnimation;
 
   @override
   void initState() {
     super.initState();
+    
+    _floatController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+    
+    _floatAnimation = Tween<Offset>(
+      begin: const Offset(0, -0.05),
+      end: const Offset(0, 0.05),
+    ).animate(CurvedAnimation(
+      parent: _floatController,
+      curve: Curves.easeInOut,
+    ));
+
     _initData();
+  }
+  
+  @override
+  void dispose() {
+    _floatController.dispose();
+    super.dispose();
   }
 
   Future<void> _initData() async {
     try {
       final lastLoc = await _locationStorageService.getLastLocation();
-      await _loadSavedLocations();
+      _savedLocations = await _locationStorageService.getSavedLocations();
       
-      if (lastLoc != null) {
-        _currentLocation = lastLoc;
+      if (_savedLocations.isNotEmpty) {
+        _currentLocation = lastLoc ?? _savedLocations.first;
         await _fetchData();
       } else {
         if (mounted) {
@@ -82,38 +82,18 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = 'Storage Error: $e\n\n(Since we just added the shared_preferences plugin, you must fully stop and restart the app for it to work!)';
           _isLoading = false;
         });
       }
-    }
-  }
-
-  Future<void> _loadSavedLocations() async {
-    final locations = await _locationStorageService.getSavedLocations();
-    if (mounted) {
-      setState(() {
-        _savedLocations = locations;
-      });
     }
   }
 
   Future<void> _fetchData() async {
     if (_currentLocation == null) return;
     
-    final store = AppDataStore();
-    if (store.airQuality != null && store.weather != null) {
-      if (mounted) {
-        setState(() {
-          _weather = store.weather;
-          _airQuality = store.airQuality;
-          _isLoading = false;
-        });
-      }
-    } else {
+    if (mounted) {
       setState(() {
         _isLoading = true;
-        _error = null;
       });
     }
 
@@ -127,32 +107,18 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
         setState(() {
           final weatherResult = results[0] as DataResult<WeatherModel>;
           final aqiResult = results[1] as DataResult<AirQualityModel>;
-          
           _weather = weatherResult.data;
           _airQuality = aqiResult.data;
-          _isOffline = weatherResult.isOffline || aqiResult.isOffline;
           _isLoading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         setState(() {
-          _error = e.toString();
           _isLoading = false;
         });
       }
     }
-  }
-
-  Future<void> _saveCurrentLocation() async {
-    if (_currentLocation == null) return;
-    await _locationStorageService.addSavedLocation(_currentLocation!);
-    await _loadSavedLocations();
-  }
-
-  Future<void> _removeLocation(LocationModel loc) async {
-    await _locationStorageService.removeSavedLocation(loc);
-    await _loadSavedLocations();
   }
 
   void _openSearchSheet() {
@@ -162,8 +128,12 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
       elevation: 0,
       isScrollControlled: true,
       builder: (context) => _SearchBottomSheet(
+        geocodingService: _geocodingService,
         onSelect: (location) async {
           await _locationStorageService.saveLastLocation(location);
+          await _locationStorageService.addSavedLocation(location);
+          _savedLocations = await _locationStorageService.getSavedLocations();
+          
           if (mounted) {
             setState(() {
               _currentLocation = location;
@@ -176,1570 +146,1050 @@ class _AirPulseScreenState extends State<AirPulseScreen> {
     );
   }
 
-  void _showDeleteContextMenu(LocationModel loc) {
-    HapticFeedback.mediumImpact();
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      builder: (context) {
-        return Container(
-          margin: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1.0),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
-                blurRadius: 20,
-                offset: const Offset(0, 10),
-              ),
-            ],
-          ),
-          child: GlassContainer(
-            borderRadius: BorderRadius.circular(32),
-            blurSigma: 8.0,
-            overlayColor: Colors.transparent,
-            borderColor: Colors.transparent,
-            child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Manage ${loc.name}',
-                      style: TextStyle(
-                        color: _primaryText,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    InkWell(
-                      onTap: () {
-                        Navigator.pop(context);
-                        _removeLocation(loc);
-                      },
-                      borderRadius: BorderRadius.circular(16),
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE11D48).withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: const [
-                            Icon(Icons.delete_outline, color: Color(0xFFE11D48)),
-                            SizedBox(width: 8),
-                            Text(
-                              'Remove City',
-                              style: TextStyle(
-                                color: Color(0xFFE11D48),
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ),
-        );
-      },
+  void _openManageCities() async {
+    final LocationModel? selectedLocation = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ManageCitiesScreen(
+          savedLocations: _savedLocations,
+          currentLocation: _currentLocation,
+        ),
+      ),
     );
-  }
 
-  Color _getAqiColor(double aqi) {
-    if (aqi <= 33) return const Color(0xFF10B981); // Green
-    if (aqi <= 66) return const Color(0xFFF59E0B); // Yellow/Orange
-    return const Color(0xFFEF4444); // Red
-  }
-
-  String _getAqiLabel(double aqi) {
-    if (aqi <= 33) return 'Good';
-    if (aqi <= 66) return 'Moderate';
-    return 'Poor';
-  }
-
-  String _formatTime(String isoString) {
-    if (isoString.isEmpty) return '--:--';
-    try {
-      final dt = DateTime.parse(isoString);
-      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } catch (_) {
-      return '--:--';
+    // Refresh state after returning
+    _savedLocations = await _locationStorageService.getSavedLocations();
+    
+    if (selectedLocation != null) {
+      // User tapped a city to switch to it
+      await _locationStorageService.saveLastLocation(selectedLocation);
+      setState(() {
+        _currentLocation = selectedLocation;
+      });
+      _fetchData();
+    } else {
+      // User just backed out, but they might have deleted the current city or all cities
+      if (_savedLocations.isEmpty) {
+        setState(() {
+          _currentLocation = null;
+        });
+      } else if (!_savedLocations.any((loc) => loc.name == _currentLocation?.name)) {
+        // If current location was deleted, fall back to first available
+        setState(() {
+          _currentLocation = _savedLocations.first;
+        });
+        await _locationStorageService.saveLastLocation(_savedLocations.first);
+        _fetchData();
+      } else {
+        setState(() {}); // Just rebuild to reflect any deletions
+      }
     }
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          ShaderMask(
-            shaderCallback: (bounds) => const LinearGradient(
-              colors: [Color(0xFF0284C7), Color(0xFF0D9488)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ).createShader(bounds),
-            child: const Icon(
-              Icons.travel_explore_rounded,
-              size: 120,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 32),
-          Text(
-            'Discover Atmosphere',
-            style: TextStyle(
-              color: _primaryText,
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
-            ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Search for a city to view live\nweather and air quality data.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              color: _secondaryText,
-              fontSize: 16,
-              height: 1.5,
-            ),
-          ),
-          const SizedBox(height: 48),
-          ElevatedButton.icon(
-            onPressed: _openSearchSheet,
-            icon: const Icon(Icons.search),
-            label: const Text('Search City'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0284C7).withValues(alpha: 0.1),
-              foregroundColor: const Color(0xFF0284C7),
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(24),
-                side: BorderSide(color: const Color(0xFF0284C7).withValues(alpha: 0.3)),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBentoCell(String title, String value, IconData icon, Color accentColor, int index) {
-    return AnimationConfiguration.staggeredGrid(
-      position: index,
-      duration: const Duration(milliseconds: 400),
-      columnCount: 2,
-      child: SlideAnimation(
-        verticalOffset: 30.0,
-        child: FadeInAnimation(
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              color: Colors.white.withValues(alpha: 0.20),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.30), width: 1.0),
-              boxShadow: [
-                BoxShadow(
-                  color: _primaryText.withValues(alpha: 0.05),
-                  blurRadius: 16,
-                  offset: const Offset(0, 6),
-                ),
-              ],
-            ),
-            child: GlassContainer(
-              borderRadius: BorderRadius.circular(24),
-              blurSigma: 8.0,
-              overlayColor: Colors.transparent,
-              borderColor: Colors.transparent,
-              child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(icon, color: accentColor.withValues(alpha: 0.8), size: 16),
-                          const SizedBox(width: 8),
-                          Text(
-                            title.toUpperCase(),
-                            style: TextStyle(
-                              color: _secondaryText,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.8,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                      Text(
-                        value,
-                        style: TextStyle(
-                          color: _primaryText,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 18,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAqiSecondaryCard(String title, double value, String unit, IconData icon) {
-    return Expanded(
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(24),
-          color: Colors.white.withValues(alpha: 0.20),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.30), width: 1.0),
-          boxShadow: [
-            BoxShadow(
-              color: _primaryText.withValues(alpha: 0.05),
-              blurRadius: 16,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: GlassContainer(
-          borderRadius: BorderRadius.circular(24),
-          blurSigma: 8.0,
-          overlayColor: Colors.transparent,
-          borderColor: Colors.transparent,
-          child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(icon, color: _secondaryText, size: 16),
-                      const SizedBox(width: 8),
-                      Text(
-                        title,
-                        style: TextStyle(
-                          color: _secondaryText,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 11,
-                          letterSpacing: 0.8,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        value.toStringAsFixed(1),
-                        style: TextStyle(
-                          color: _primaryText,
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 4.0),
-                        child: Text(
-                          unit,
-                          style: TextStyle(
-                            color: _primaryText.withValues(alpha: 0.5),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-    );
-  }
-  
-  Widget _buildWeatherBento() {
-    final isActive = _activeCard == ActiveDashboardCard.weather;
-    
-    return GestureDetector(
-      onTap: () {
-        if (!isActive) {
-          HapticFeedback.selectionClick();
-          setState(() => _activeCard = ActiveDashboardCard.weather);
-        }
-      },
-      child: Interactive3DCard(
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 400),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isActive 
-              ? [Colors.white.withValues(alpha: 0.35), Colors.white.withValues(alpha: 0.15)]
-              : [Colors.white.withValues(alpha: 0.20), Colors.white.withValues(alpha: 0.05)],
-          ),
-          border: Border.all(color: Colors.white.withValues(alpha: isActive ? 0.40 : 0.20), width: 1.0),
-          boxShadow: [
-            BoxShadow(
-              color: _primaryText.withValues(alpha: isActive ? 0.08 : 0.03),
-              blurRadius: isActive ? 24 : 12,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: GlassContainer(
-          borderRadius: BorderRadius.circular(28),
-          blurSigma: 8.0,
-          overlayColor: Colors.transparent,
-          borderColor: Colors.transparent,
-          child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Row(
-                children: [
-                  Expanded(
-                    flex: 5,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AnimatedNumberCounter(
-                          value: _weather!.temperature,
-                          fractionDigits: 0,
-                          suffix: '°',
-                          style: TextStyle(
-                            color: _primaryText,
-                            fontSize: 48,
-                            fontWeight: FontWeight.w900,
-                            height: 1.0,
-                            letterSpacing: -2,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        AnimatedNumberCounter(
-                          value: _weather!.feelsLike,
-                          fractionDigits: 0,
-                          prefix: 'Feels like ',
-                          suffix: '°',
-                          style: TextStyle(
-                            color: _secondaryText,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const Spacer(),
-                        Text(
-                          _weather!.conditionLabel,
-                          style: TextStyle(
-                            color: _primaryText,
-                            fontSize: 18,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    flex: 6,
-                    child: Container(
-                      alignment: Alignment.centerRight,
-                      child: Opacity(
-                        opacity: isActive ? 1.0 : 0.6,
-                        child: WeatherIllustration(
-                          conditionLabel: _weather!.conditionLabel,
-                          isDay: true,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-          ),
-        ),
-      ),
-      ),
-    );
-  }
-
-  Widget _buildAqiBento() {
-    final isActive = _activeCard == ActiveDashboardCard.aqi;
-
-    return GestureDetector(
-      onTap: () {
-        if (!isActive) {
-          HapticFeedback.selectionClick();
-          setState(() => _activeCard = ActiveDashboardCard.aqi);
-        }
-      },
-      child: Interactive3DCard(
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 400),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(28),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: isActive 
-              ? [Colors.white.withValues(alpha: 0.35), Colors.white.withValues(alpha: 0.15)]
-              : [Colors.white.withValues(alpha: 0.20), Colors.white.withValues(alpha: 0.05)],
-          ),
-          border: Border.all(color: Colors.white.withValues(alpha: isActive ? 0.40 : 0.20), width: 1.0),
-          boxShadow: [
-            BoxShadow(
-              color: _primaryText.withValues(alpha: isActive ? 0.08 : 0.03),
-              blurRadius: isActive ? 24 : 12,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: GlassContainer(
-          borderRadius: BorderRadius.circular(28),
-          blurSigma: 8.0,
-          overlayColor: Colors.transparent,
-          borderColor: Colors.transparent,
-          child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-              child: RepaintBoundary(
-              child: TweenAnimationBuilder<double>(
-                tween: Tween<double>(begin: 0.0, end: _airQuality!.europeanAqi),
-                duration: const Duration(milliseconds: 1200),
-                curve: Curves.easeOutCubic,
-                builder: (context, aqiVal, child) {
-                  final normalizedValue = math.min(aqiVal / 100.0, 1.0);
-                  final activeColor = _getAqiColor(aqiVal);
-
-                  return Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      SizedBox(
-                        height: 110,
-                        width: 110,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            BreathingAqiRing(
-                              aqiVal: _airQuality!.europeanAqi,
-                              child: CustomPaint(
-                                size: const Size(110, 110),
-                                painter: AqiGaugePainter(
-                                  value: normalizedValue,
-                                  activeColor: activeColor,
-                                ),
-                              ),
-                            ),
-                            Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                AnimatedNumberCounter(
-                                  value: aqiVal,
-                                  fractionDigits: 0,
-                                  style: TextStyle(
-                                    color: _primaryText,
-                                    fontSize: 32,
-                                    fontWeight: FontWeight.w900,
-                                    letterSpacing: -1,
-                                  ),
-                                ),
-                                Text(
-                                  _getAqiLabel(aqiVal).toUpperCase(),
-                                  style: TextStyle(
-                                    color: activeColor,
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.w800,
-                                    letterSpacing: 1.5,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'AIR QUALITY',
-                        style: TextStyle(
-                          color: _secondaryText,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.5,
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-  
-  Widget _buildDashboardContent() {
+  @override
+  Widget build(BuildContext context) {
     if (_isLoading) {
-      return Padding(
-        key: const ValueKey('loading'),
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+      return const Scaffold(
+        backgroundColor: Color(0xFF0A0A0A),
+        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+      );
+    }
+
+    if (_savedLocations.isEmpty) {
+      return _buildDiscoverScreen();
+    }
+
+    return _buildActiveWeatherScreen();
+  }
+
+  Widget _buildDiscoverScreen() {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0A),
+      body: SafeArea(
         child: Column(
           children: [
-              const SkeletonLoader(width: double.infinity, height: 220, borderRadius: 28),
-              const SizedBox(height: 24),
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 2.0,
-                children: List.generate(4, (_) => const SkeletonLoader(width: double.infinity, height: 80, borderRadius: 24)),
+            const Spacer(flex: 2),
+            const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 40.0),
+              child: Text(
+                'Discover The\nWeather In Your City',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
+                  height: 1.2,
+                  letterSpacing: -1.0,
+                ),
               ),
-            ],
+            ),
+            const Spacer(flex: 1),
+            SlideTransition(
+              position: _floatAnimation,
+              child: const SizedBox(
+                height: 250,
+                width: 250,
+                child: StaticDiscoverCloud(),
+              ),
+            ),
+            const Spacer(flex: 1),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 40.0),
+              child: Text(
+                'Get to know your weather maps and radar precipitation forcast',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.6),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                  height: 1.4,
+                ),
+              ),
+            ),
+            const SizedBox(height: 48),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 48.0),
+              child: GestureDetector(
+                onTap: _openSearchSheet,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFFFBBF24), Color(0xFFD97706)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(40),
+                  ),
+                  child: const Center(
+                    child: Text(
+                      'GET STARTED',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+            const Spacer(flex: 2),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildActiveWeatherScreen() {
+    if (_weather == null || _currentLocation == null) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF0A0A0A),
+        body: Center(child: CircularProgressIndicator(color: Colors.white)),
       );
     }
-    
-    if (_error != null) {
-      return ErrorState(
-        key: const ValueKey('error'),
-        accentColor: const Color(0xFFE11D48),
-        message: _error!,
-        onRetry: _fetchData,
-      );
-    }
-    
-    if (_currentLocation == null) {
-      return Padding(
-        key: const ValueKey('empty'),
-        padding: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.15),
-        child: _buildEmptyState(),
-      );
-    }
-    
-    if (_weather != null && _airQuality != null) {
-      return Padding(
-        key: const ValueKey('dashboard'),
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0A),
+      body: SafeArea(
         child: Column(
           children: [
-            // Title Section
-              Row(
+            // Top App Bar Area
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.add, color: Colors.white),
+                    onPressed: _openSearchSheet,
+                  ),
                   Expanded(
                     child: Text(
                       _currentLocation!.name,
-                      style: TextStyle(
-                        color: _primaryText,
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -1,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.w500,
+                        letterSpacing: 0.5,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF0284C7).withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFF0284C7).withValues(alpha: 0.2)),
-                    ),
-                    child: const Text(
-                      'LIVE',
-                      style: TextStyle(
-                        color: Color(0xFF0284C7),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.8,
-                      ),
-                    ),
+                  IconButton(
+                    icon: const Icon(Icons.menu, color: Colors.white),
+                    onPressed: _openManageCities,
                   ),
                 ],
               ),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  _currentLocation!.country,
-                  style: TextStyle(
-                    color: _secondaryText,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-              
-              // Balanced Weather & AQI Row
-              IntrinsicHeight(
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+            ),
+
+            // Main Unified Scrollable Content
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                child: Column(
                   children: [
-                    Expanded(
-                      flex: 1,
-                      child: _buildWeatherBento(),
+                    const SizedBox(height: 56),
+                    SlideTransition(
+                      position: _floatAnimation,
+                      child: SizedBox(
+                        height: 220,
+                        width: 220,
+                        child: WeatherIllustration(
+                          conditionLabel: _weather!.conditionLabel,
+                          isDay: _weather!.isDay,
+                          animate: true,
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      flex: 1,
-                      child: _buildAqiBento(),
+                    const SizedBox(height: 24),
+                    Text(
+                      '${_weather!.temperature.round()}°',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 100,
+                        fontWeight: FontWeight.w300,
+                        height: 1.0,
+                        letterSpacing: -2.0,
+                      ),
                     ),
+                    Text(
+                      _weather!.conditionLabel,
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 22,
+                        fontWeight: FontWeight.w400,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // AQI / Stats Panel
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      child: GlassContainer(
+                        borderRadius: BorderRadius.circular(24),
+                        blurSigma: 16.0,
+                        overlayColor: Colors.white.withValues(alpha: 0.05),
+                        borderColor: Colors.white.withValues(alpha: 0.1),
+                        child: Padding(
+                          padding: const EdgeInsets.all(20.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _buildStatItem('AQI', _airQuality?.europeanAqi.round().toString() ?? '--', _getAqiColor(_airQuality?.europeanAqi ?? 0)),
+                              _buildStatItem('HUMIDITY', '${_weather!.humidity.round()}%', Colors.blueAccent),
+                              _buildStatItem('WIND', '${_weather!.windSpeed.round()} km/h', Colors.grey.shade400),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 40),
+
+                    // Hourly Forecast Section
+                    _buildHourlyForecastSection(),
+                    const SizedBox(height: 40),
+
+                    // Weekly Forecast Section
+                    _buildWeeklyForecastSection(),
+                    const SizedBox(height: 40),
                   ],
                 ),
               ),
-              const SizedBox(height: 24),
-
-              // Weather Stats Grid
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 2.0, 
-                children: [
-                  _buildBentoCell('Humidity', '${_weather!.humidity.toStringAsFixed(0)}%', Icons.water_drop_outlined, const Color(0xFF0284C7), 0),
-                  _buildBentoCell('Wind', '${_weather!.windSpeed.toStringAsFixed(1)} km/h', Icons.air, const Color(0xFF0284C7), 1),
-                  _buildBentoCell('UV Index', _weather!.uvIndexMax.toStringAsFixed(1), Icons.wb_sunny_outlined, const Color(0xFF0284C7), 2),
-                  _buildBentoCell('Sun', '${_formatTime(_weather!.sunrise)} / ${_formatTime(_weather!.sunset)}', Icons.wb_twilight, const Color(0xFF0284C7), 3),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // AQI Secondary Cards
-              Row(
-                children: [
-                  _buildAqiSecondaryCard('PM2.5', _airQuality!.pm2_5, 'µg/m³', Icons.masks_outlined),
-                  const SizedBox(width: 16),
-                  _buildAqiSecondaryCard('PM10', _airQuality!.pm10, 'µg/m³', Icons.blur_on),
-                ],
-              ),
-              const SizedBox(height: 120),
-            ],
+            ),
+          ],
         ),
-      );
-    }
-    
-    return const SizedBox.shrink(key: ValueKey('none'));
+      ),
+    );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: Stack(
-        children: [
-          // Layer 0: Dynamic Ambient Sky Layer
-          Positioned.fill(
-            child: AtmosphericBackground(
-              weather: _weather,
-              airQuality: _airQuality,
-              activeCard: _activeCard,
-            ),
-          ),
-          
-          if (_weather != null)
-            Positioned.fill(
-              child: WeatherParticleSystem(
-                conditionLabel: _weather!.conditionLabel,
-              ),
-            ),
-          
-          // Layer 1: Scrollable Content
-          CustomScrollView(
-            physics: const BouncingScrollPhysics(),
-            slivers: [
-              // Padding for the fixed header
-              SliverPadding(
-                padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top + 80),
-              ),
-              
-              // Saved Locations Chips (Scrolls with content)
-              if (_savedLocations.isNotEmpty)
-                SliverToBoxAdapter(
-                  child: SizedBox(
-                    height: 48,
-                    child: ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      itemCount: _savedLocations.length,
-                      itemBuilder: (context, index) {
-                        final loc = _savedLocations[index];
-                        final isSelected = _currentLocation != null && loc.name == _currentLocation!.name && loc.country == _currentLocation!.country;
-                        
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 12.0),
-                          child: GestureDetector(
-                            onTap: () async {
-                              HapticFeedback.selectionClick();
-                              await _locationStorageService.saveLastLocation(loc);
-                              if (mounted) {
-                                setState(() {
-                                  _currentLocation = loc;
-                                  _isLoading = true;
-                                });
-                                _fetchData();
-                              }
-                            },
-                            onLongPress: () => _showDeleteContextMenu(loc),
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              curve: Curves.easeInOut,
-                              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                              decoration: BoxDecoration(
-                                color: isSelected 
-                                    ? _primaryText 
-                                    : Colors.white.withValues(alpha: 0.3),
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(
-                                  color: isSelected 
-                                      ? Colors.transparent 
-                                      : Colors.white.withValues(alpha: 0.6),
-                                  width: 1.0,
-                                ),
-                                boxShadow: isSelected 
-                                  ? [
-                                      BoxShadow(
-                                        color: _primaryText.withValues(alpha: 0.3),
-                                        blurRadius: 10,
-                                        offset: const Offset(0, 4),
-                                      ),
-                                    ]
-                                  : [],
-                              ),
-                              child: Text(
-                                loc.name, 
-                                style: TextStyle(
-                                  color: isSelected ? Colors.white : const Color(0xFF475569),
-                                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                                  fontSize: 14,
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+  Widget _buildStatItem(String label, String value, Color dotColor) {
+    return Column(
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: dotColor,
+                boxShadow: [
+                  BoxShadow(
+                    color: dotColor.withValues(alpha: 0.5),
+                    blurRadius: 8.0,
+                    spreadRadius: 2.0,
                   ),
-                ),
-                
-              if (_savedLocations.isNotEmpty)
-                const SliverToBoxAdapter(child: SizedBox(height: 16)),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.6),
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.0,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ],
+    );
+  }
 
-              // Main Dashboard
-              SliverToBoxAdapter(
-                child: PageTransitionSwitcher(
-                  duration: const Duration(milliseconds: 600),
-                  transitionBuilder: (child, animation, secondaryAnimation) {
-                    return FadeThroughTransition(
-                      animation: animation,
-                      secondaryAnimation: secondaryAnimation,
-                      fillColor: Colors.transparent,
-                      child: child,
-                    );
-                  },
-                  child: _buildDashboardContent(),
+  Color _getAqiColor(double aqi) {
+    if (aqi == 0) return Colors.grey;
+    if (aqi <= 33) return const Color(0xFF10B981); 
+    if (aqi <= 66) return const Color(0xFFF59E0B); 
+    return const Color(0xFFEF4444); 
+  }
+
+  Widget _buildHourlyForecastSection() {
+    if (_weather == null || _weather!.hourlyForecast.isEmpty) return const SizedBox.shrink();
+
+    // Filter upcoming hours
+    final now = DateTime.now();
+    final upcomingHours = _weather!.hourlyForecast.where((h) => 
+      h.time.isAfter(now.subtract(const Duration(minutes: 59)))
+    ).take(24).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          child: Row(
+            children: [
+              const Icon(Icons.access_time_filled, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                'HOURLY FORECAST',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.2,
                 ),
               ),
             ],
           ),
+        ),
+        const SizedBox(height: 16),
+        SizedBox(
+          height: 160,
+          child: ListView.builder(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: upcomingHours.length,
+            itemBuilder: (context, index) {
+              final hourly = upcomingHours[index];
+              final isCurrentHour = index == 0;
+              final hr = hourly.time.hour;
+              final suffix = hr >= 12 ? 'PM' : 'AM';
+              final displayHr = hr % 12 == 0 ? 12 : hr % 12;
+              final hourLabel = '$displayHr $suffix';
 
-          // Layer 2: Fixed Hovering Header (Universal)
-          NexusUniversalHeader(
-            onBack: () => Navigator.of(context).pop(),
-            actions: [
-              if (_isOffline)
-                Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE11D48).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: const Color(0xFFE11D48).withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.cloud_off, color: Color(0xFFE11D48), size: 12),
-                      SizedBox(width: 4),
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: InteractiveWeatherCard(
+                  width: 90,
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
                       Text(
-                        'OFFLINE',
+                        hourLabel,
                         style: TextStyle(
-                          color: Color(0xFFE11D48),
-                          fontSize: 10,
+                          color: Colors.white.withValues(alpha: isCurrentHour ? 1.0 : 0.6),
+                          fontSize: 16,
+                          fontWeight: isCurrentHour ? FontWeight.bold : FontWeight.w500,
+                        ),
+                      ),
+                      SizedBox(
+                        height: 50,
+                        width: 50,
+                        child: InteractiveWeatherIllustration(
+                          conditionLabel: hourly.conditionLabel,
+                          isDay: hourly.isDay,
+                        ),
+                      ),
+                      Text(
+                        '${hourly.temperature.round()}°',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                     ],
                   ),
                 ),
-              if (_currentLocation != null)
-                TactileGlassButton(
-                  icon: Icons.star_border,
-                  onTap: _saveCurrentLocation,
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWeeklyForecastSection() {
+    // Generate dummy weekly data
+    final baseTemp = _weather!.temperature.round();
+    final days = ['Today', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.calendar_month, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                '7-DAY FORECAST',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.7),
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1.2,
                 ),
-              const SizedBox(width: 4),
-              TactileGlassButton(
-                icon: Icons.search,
-                onTap: _openSearchSheet,
               ),
             ],
           ),
+          const SizedBox(height: 16),
+          ...List.generate(7, (index) {
+            final high = baseTemp + (index % 4);
+            final low = baseTemp - 5 - (index % 3);
+            final condition = index % 2 == 0 ? 'Clear' : (index == 3 ? 'Storm' : 'Cloudy');            return Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: InteractiveWeatherCard(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                child: SizedBox(
+                  height: 40,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      // Day Text
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          days[index],
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: index == 0 ? FontWeight.bold : FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      // Temperature Center
+                      Align(
+                        alignment: Alignment.center,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              '$low°',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.5),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              width: 60,
+                              height: 4,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Colors.blue, Colors.orange],
+                                ),
+                                borderRadius: BorderRadius.circular(2),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              '$high°',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Positioned Icon
+                      Positioned(
+                        top: -4,
+                        right: 0,
+                        child: SizedBox(
+                          height: 40,
+                          width: 40,
+                          child: InteractiveWeatherIllustration(
+                            conditionLabel: condition,
+                            isDay: true,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
         ],
       ),
     );
   }
 }
 
-class _SearchBottomSheet extends StatefulWidget {
-  final Function(LocationModel) onSelect;
-  const _SearchBottomSheet({required this.onSelect});
+class InteractiveWeatherCard extends StatelessWidget {
+  final Widget child;
+  final double width;
+  final EdgeInsetsGeometry padding;
 
-  @override
-  State<_SearchBottomSheet> createState() => _SearchBottomSheetState();
-}
-
-class _SearchBottomSheetState extends State<_SearchBottomSheet> {
-  final GeocodingService _geocodingService = GeocodingService();
-  Timer? _debounce;
-  List<LocationModel> _searchResults = [];
-  bool _isSearching = false;
-
-  void _onSearchChanged(String query) {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 400), () async {
-      if (query.trim().isEmpty) {
-        if (mounted) {
-          setState(() {
-            _searchResults = [];
-            _isSearching = false;
-          });
-        }
-        return;
-      }
-      
-      if (mounted) setState(() => _isSearching = true);
-      try {
-        final results = await _geocodingService.searchCities(query);
-        if (mounted) setState(() => _searchResults = results);
-      } catch (e) {
-        // ignore
-      } finally {
-        if (mounted) setState(() => _isSearching = false);
-      }
-    });
-  }
-  
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    super.dispose();
-  }
+  const InteractiveWeatherCard({
+    super.key,
+    required this.child,
+    this.width = double.infinity,
+    this.padding = const EdgeInsets.all(0),
+  });
 
   @override
   Widget build(BuildContext context) {
     return GlassContainer(
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
+      borderRadius: BorderRadius.circular(24),
       blurSigma: 12.0,
-      height: MediaQuery.of(context).size.height * 0.85,
-      overlayColor: const Color(0xFF0F172A).withValues(alpha: 0.12),
-      borderColor: Colors.white.withValues(alpha: 0.15),
-      child: Padding(
-            padding: EdgeInsets.only(
-              top: 24,
-              left: 24,
-              right: 24,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-            ),
-            child: Column(
-              children: [
-                // Top Pill
-                Center(
-                  child: Container(
-                    width: 48,
-                    height: 5,
-                    margin: const EdgeInsets.only(bottom: 32),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(2.5),
-                    ),
-                  ),
-                ),
-                
-                // Search Bar
-                GlassContainer(
-                  borderRadius: BorderRadius.circular(24),
-                  blurSigma: 8.0,
-                  overlayColor: Colors.white.withValues(alpha: 0.05),
-                  borderColor: Colors.white.withValues(alpha: 0.1),
-                  child: TextField(
-                    autofocus: true,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 16),
-                    decoration: InputDecoration(
-                      hintText: 'Search city...',
-                      hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
-                      filled: true,
-                      fillColor: Colors.transparent,
-                      prefixIcon: const Icon(Icons.search, color: Colors.white),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
-                    ),
-                    onChanged: _onSearchChanged,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                
-                // Results List
-                if (_isSearching)
-                  const Expanded(
-                    child: Center(
-                      child: CircularProgressIndicator(color: Colors.white),
-                    ),
-                  )
-                else
-                  Expanded(
-                    child: ListView.separated(
-                      padding: const EdgeInsets.only(top: 8, bottom: 24),
-                      itemCount: _searchResults.length,
-                      separatorBuilder: (context, index) => const SizedBox(height: 16),
-                      itemBuilder: (context, index) {
-                        final loc = _searchResults[index];
-                        return GlassContainer(
-                          borderRadius: BorderRadius.circular(24),
-                          blurSigma: 8.0,
-                          overlayColor: Colors.white.withValues(alpha: 0.05),
-                          borderColor: Colors.white.withValues(alpha: 0.1),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(24),
-                            onTap: () {
-                              Navigator.pop(context);
-                              widget.onSelect(loc);
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(16),
-                                      border: Border.all(color: Colors.white.withValues(alpha: 0.15), width: 1.0),
-                                    ),
-                                    child: const Icon(Icons.location_on_rounded, color: Colors.white, size: 24),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          loc.name,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w600,
-                                            letterSpacing: 0.2,
-                                          ),
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          loc.country,
-                                          style: TextStyle(
-                                            color: Colors.white.withValues(alpha: 0.6),
-                                            fontSize: 14,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-              ],
-            ),
-          ),
+      overlayColor: const Color(0xFF1E1E1E).withValues(alpha: 0.6),
+      borderColor: Colors.white.withValues(alpha: 0.1),
+      child: SizedBox(
+        width: width,
+        child: Padding(
+          padding: padding,
+          child: child,
+        ),
+      ),
     );
   }
 }
 
-// ---------------------------------------------------------
-// ATMOSPHERIC BACKGROUND (Dynamic Sky & Weather Particles)
-// ---------------------------------------------------------
+class InteractiveWeatherIllustration extends StatefulWidget {
+  final String conditionLabel;
+  final bool isDay;
 
-class AtmosphericBackground extends StatefulWidget {
-  final WeatherModel? weather;
-  final AirQualityModel? airQuality;
-  final ActiveDashboardCard? activeCard;
-
-  const AtmosphericBackground({super.key, this.weather, this.airQuality, this.activeCard});
+  const InteractiveWeatherIllustration({
+    super.key,
+    required this.conditionLabel,
+    this.isDay = true,
+  });
 
   @override
-  State<AtmosphericBackground> createState() => _AtmosphericBackgroundState();
+  State<InteractiveWeatherIllustration> createState() => _InteractiveWeatherIllustrationState();
 }
 
-class _AtmosphericBackgroundState extends State<AtmosphericBackground> with SingleTickerProviderStateMixin {
-  late AnimationController _timeController;
+class _InteractiveWeatherIllustrationState extends State<InteractiveWeatherIllustration> with SingleTickerProviderStateMixin {
+  bool _isHovered = false;
+  late AnimationController _pulseController;
 
   @override
   void initState() {
     super.initState();
-    _timeController = AnimationController(vsync: this, duration: const Duration(seconds: 10))..repeat();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
   }
 
   @override
   void dispose() {
-    _timeController.dispose();
+    _pulseController.dispose();
     super.dispose();
+  }
+
+  void _setHovered(bool hovered) {
+    setState(() {
+      _isHovered = hovered;
+      if (hovered) {
+        _pulseController.repeat(reverse: true);
+      } else {
+        _pulseController.animateTo(0.0, duration: const Duration(milliseconds: 300));
+      }
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    bool isWeather = widget.activeCard == ActiveDashboardCard.weather;
-    bool isRaining = false;
-    bool isSnowing = false;
+    final condition = widget.conditionLabel.toLowerCase();
+    IconData iconData = Icons.wb_sunny;
+    List<Color> gradientColors = [Colors.yellowAccent, Colors.orangeAccent];
+    Color glowColor = Colors.orangeAccent;
 
-    if (isWeather && widget.weather != null) {
-      final label = widget.weather!.conditionLabel.toLowerCase();
-      if (label.contains('rain') || label.contains('drizzle') || label.contains('thunder')) {
-        isRaining = true;
-      } else if (label.contains('snow')) {
-        isSnowing = true;
-      }
+    if (condition.contains('cloud') || condition.contains('overcast') || condition.contains('fog') || condition.contains('partly')) {
+      iconData = Icons.cloud;
+      gradientColors = [Colors.white, Colors.lightBlue.shade100];
+      glowColor = Colors.lightBlue.shade200;
+    } else if (condition.contains('rain') || condition.contains('drizzle') || condition.contains('shower')) {
+      iconData = Icons.water_drop;
+      gradientColors = [Colors.lightBlueAccent, Colors.blue];
+      glowColor = Colors.blueAccent;
+    } else if (condition.contains('storm') || condition.contains('thunder')) {
+      iconData = Icons.flash_on;
+      gradientColors = [Colors.yellow, Colors.deepOrange];
+      glowColor = Colors.amber;
+    } else if (condition.contains('snow')) {
+      iconData = Icons.ac_unit;
+      gradientColors = [Colors.white, Colors.cyan.shade100];
+      glowColor = Colors.cyan;
+    } else if (!widget.isDay && !condition.contains('sun') && !condition.contains('clear')) {
+      iconData = Icons.nightlight_round;
+      gradientColors = [Colors.indigo.shade200, Colors.deepPurpleAccent];
+      glowColor = Colors.deepPurple;
+    } else if (!widget.isDay) {
+      iconData = Icons.nightlight_round;
+      gradientColors = [Colors.indigo.shade200, Colors.deepPurpleAccent];
+      glowColor = Colors.deepPurple;
     }
 
-    return Stack(
-      children: [
-        TweenAnimationBuilder<double>(
-          tween: Tween<double>(begin: isWeather ? 1.0 : 0.0, end: isWeather ? 1.0 : 0.0),
-          duration: const Duration(milliseconds: 1200),
-          curve: Curves.easeInOutCubic,
-          builder: (context, transition, child) {
+    return MouseRegion(
+      onEnter: (_) => _setHovered(true),
+      onExit: (_) => _setHovered(false),
+      child: GestureDetector(
+        onTapDown: (_) => _setHovered(true),
+        onTapUp: (_) => _setHovered(false),
+        onTapCancel: () => _setHovered(false),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final iconSize = constraints.maxWidth * 0.8;
             return AnimatedBuilder(
-              animation: _timeController,
-              builder: (context, _) {
-                return CustomPaint(
-                  size: Size.infinite,
-                  painter: AtmosphericBackgroundPainter(
-                    transition: transition,
-                    time: _timeController.value,
-                    weather: widget.weather,
-                    aqi: widget.airQuality,
+              animation: _pulseController,
+              builder: (context, child) {
+                final scale = 1.0 + (_pulseController.value * 0.12);
+                return Transform.scale(
+                  scale: scale,
+                  child: Center(
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // 3D Drop Shadow
+                        Transform.translate(
+                          offset: const Offset(2, 3),
+                          child: Icon(
+                            iconData,
+                            size: iconSize,
+                            color: Colors.black.withValues(alpha: 0.6),
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.4),
+                                offset: const Offset(1, 2),
+                                blurRadius: 4.0,
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Top Highlight for Bevel
+                        Transform.translate(
+                          offset: const Offset(-1, -1),
+                          child: Icon(
+                            iconData,
+                            size: iconSize,
+                            color: Colors.white.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        // Main Gradient Icon
+                        ShaderMask(
+                          shaderCallback: (Rect bounds) {
+                            return LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: gradientColors,
+                            ).createShader(bounds);
+                          },
+                          child: Icon(
+                            iconData,
+                            size: iconSize,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
             );
           },
         ),
-        if (isRaining || isSnowing)
-          Positioned.fill(
-            child: TweenAnimationBuilder<double>(
-              tween: Tween<double>(begin: isWeather ? 1.0 : 0.0, end: isWeather ? 1.0 : 0.0),
-              duration: const Duration(milliseconds: 1200),
-              builder: (context, val, child) {
-                return Opacity(
-                  opacity: val,
-                  child: WeatherParticleEmitter(
-                    isSnowing: isSnowing,
-                    isRaining: isRaining,
-                  ),
-                );
-              },
-            ),
-          ),
-      ],
+      ),
     );
   }
 }
 
-class AtmosphericBackgroundPainter extends CustomPainter {
-  final double transition;
-  final double time;
-  final WeatherModel? weather;
-  final AirQualityModel? aqi;
+class ManageCitiesScreen extends StatefulWidget {
+  final List<LocationModel> savedLocations;
+  final LocationModel? currentLocation;
 
-  AtmosphericBackgroundPainter({
-    required this.transition,
-    required this.time,
-    this.weather,
-    this.aqi,
+  const ManageCitiesScreen({
+    super.key,
+    required this.savedLocations,
+    required this.currentLocation,
   });
 
   @override
-  void paint(Canvas canvas, Size size) {
-    bool isDay = true;
-    if (weather != null) {
-      isDay = weather!.isDay;
-    }
-    
-    // 1. Base color interpolation (Mesh Gradient)
-    _drawMeshGradient(canvas, size, isDay);
-
-    // 2. Drifting Ambient Orbs
-    _drawDriftingOrbs(canvas, size, isDay);
-
-    // 3. Morphing Ambient AQI -> Weather Elements
-    Color c1 = const Color(0xFF10B981); // AQI Green
-    Color c2 = const Color(0xFF3B82F6); // AQI Blue
-    if (aqi != null) {
-      final aqiVal = aqi!.europeanAqi;
-      if (aqiVal > 66) { c1 = const Color(0xFFEF4444); c2 = const Color(0xFFF97316); }
-      else if (aqiVal > 33) { c1 = const Color(0xFFEAB308); c2 = const Color(0xFFF97316); }
-    }
-
-    final aqiTopLeft = const Offset(-50, -50);
-    final aqiTopLeftRadius = 250.0;
-    
-    final aqiBottomRight = Offset(size.width - 50, size.height - 150);
-    final aqiBottomRightRadius = 300.0;
-
-    String cond = weather?.conditionLabel.toLowerCase() ?? 'clear';
-    bool isCloudy = cond.contains('cloud');
-    bool isRain = cond.contains('rain') || cond.contains('drizzle') || cond.contains('thunder') || cond.contains('storm');
-    bool isSnow = cond.contains('snow');
-    bool isClear = !isCloudy && !isRain && !isSnow;
-
-    if (isClear) {
-      if (isDay) {
-        _drawSunTransition(canvas, size, c1, aqiTopLeft, aqiTopLeftRadius);
-      } else {
-        _drawMoonTransition(canvas, size, c1, aqiTopLeft, aqiTopLeftRadius);
-      }
-      
-      final cloudCenter = Offset.lerp(aqiBottomRight, Offset(180, size.height - 300), transition)!;
-      final cloudW = ui.lerpDouble(aqiBottomRightRadius * 2, 600, transition)!;
-      final cloudColor = Color.lerp(c2.withValues(alpha: 0.3), Colors.white.withValues(alpha: 0.6), transition)!;
-      _drawStylizedCloud(canvas, cloudCenter, cloudW, cloudColor);
-    } else if (isCloudy) {
-       final cloud1Center = Offset.lerp(aqiTopLeft, Offset(120, 150), transition)!;
-       final cloud1R = ui.lerpDouble(aqiTopLeftRadius, 180, transition)!;
-       final c1Color = Color.lerp(c1.withValues(alpha: 0.3), isDay ? Colors.white.withValues(alpha: 0.8) : const Color(0xFF94A3B8).withValues(alpha: 0.6), transition)!;
-       _drawStylizedCloud(canvas, cloud1Center, cloud1R * 2, c1Color);
-
-       final cloud2Center = Offset.lerp(aqiBottomRight, Offset(size.width - 150, 320), transition)!;
-       final cloud2R = ui.lerpDouble(aqiBottomRightRadius, 250, transition)!;
-       final c2Color = Color.lerp(c2.withValues(alpha: 0.3), isDay ? const Color(0xFFE2E8F0).withValues(alpha: 0.7) : const Color(0xFF64748B).withValues(alpha: 0.5), transition)!;
-       _drawStylizedCloud(canvas, cloud2Center, cloud2R * 2, c2Color);
-    } else if (isRain) {
-       final cloud1Center = Offset.lerp(aqiTopLeft, Offset(size.width/2, 100), transition)!;
-       final cloud1R = ui.lerpDouble(aqiTopLeftRadius, size.width * 0.45, transition)!;
-       final c1Color = Color.lerp(c1.withValues(alpha: 0.3), const Color(0xFF94A3B8).withValues(alpha: 0.7), transition)!;
-       _drawStylizedCloud(canvas, cloud1Center, cloud1R * 2, c1Color);
-
-       final cloud2Center = Offset.lerp(aqiBottomRight, Offset(size.width - 100, 250), transition)!;
-       final cloud2R = ui.lerpDouble(aqiBottomRightRadius, 200, transition)!;
-       final c2Color = Color.lerp(c2.withValues(alpha: 0.3), const Color(0xFF64748B).withValues(alpha: 0.5), transition)!;
-       _drawStylizedCloud(canvas, cloud2Center, cloud2R * 2, c2Color);
-    } else {
-       final cloud1Center = Offset.lerp(aqiTopLeft, Offset(size.width/2, 150), transition)!;
-       final cloud1R = ui.lerpDouble(aqiTopLeftRadius, size.width * 0.5, transition)!;
-       final c1Color = Color.lerp(c1.withValues(alpha: 0.3), const Color(0xFFDBEAFE).withValues(alpha: 0.6), transition)!;
-       _drawStylizedCloud(canvas, cloud1Center, cloud1R * 2, c1Color);
-
-       final cloud2Center = Offset.lerp(aqiBottomRight, Offset(size.width - 200, 350), transition)!;
-       final cloud2R = ui.lerpDouble(aqiBottomRightRadius, 250, transition)!;
-       final c2Color = Color.lerp(c2.withValues(alpha: 0.3), Colors.white.withValues(alpha: 0.5), transition)!;
-       _drawStylizedCloud(canvas, cloud2Center, cloud2R * 2, c2Color);
-    }
-  }
-
-  void _drawMeshGradient(Canvas canvas, Size size, bool isDay) {
-    final baseAqi = isDay ? const Color(0xFFE2E8F0) : const Color(0xFF0F172A);
-    final baseWeather = isDay ? const Color(0xFFF8FAFC) : const Color(0xFF020617);
-    final baseColor = Color.lerp(baseAqi, baseWeather, transition)!;
-    canvas.drawColor(baseColor, BlendMode.srcOver);
-
-    // Highly vibrant mesh orbs
-    final orb1Color = Color.lerp(
-      isDay ? const Color(0xFF38BDF8).withValues(alpha: 0.3) : const Color(0xFF4F46E5).withValues(alpha: 0.5),
-      isDay ? const Color(0xFF0EA5E9).withValues(alpha: 0.3) : const Color(0xFF312E81).withValues(alpha: 0.6),
-      transition
-    )!;
-    final orb2Color = Color.lerp(
-      isDay ? const Color(0xFF34D399).withValues(alpha: 0.2) : const Color(0xFF9333EA).withValues(alpha: 0.4),
-      isDay ? const Color(0xFFF59E0B).withValues(alpha: 0.3) : const Color(0xFF7E22CE).withValues(alpha: 0.5),
-      transition
-    )!;
-
-    final x1 = size.width * 0.5 + math.sin(time * math.pi * 2) * size.width * 0.4;
-    final y1 = size.height * 0.5 + math.cos(time * math.pi * 1.5) * size.height * 0.3;
-    final r1 = size.width * 0.8;
-
-    final x2 = size.width * 0.5 + math.cos(time * math.pi * 2.5) * size.width * 0.5;
-    final y2 = size.height * 0.5 + math.sin(time * math.pi * 1.8) * size.height * 0.4;
-    final r2 = size.width * 0.9;
-
-    final paint1 = Paint()
-      ..shader = ui.Gradient.radial(Offset(x1, y1), r1, [orb1Color, orb1Color.withValues(alpha: 0)])
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 50);
-    final paint2 = Paint()
-      ..shader = ui.Gradient.radial(Offset(x2, y2), r2, [orb2Color, orb2Color.withValues(alpha: 0)])
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 60);
-
-    canvas.drawCircle(Offset(x1, y1), r1, paint1);
-    canvas.drawCircle(Offset(x2, y2), r2, paint2);
-
-    if (!isDay) {
-      // Starfield always visible at night, intensifies on Weather tab
-      final starAlphaBase = ui.lerpDouble(0.3, 0.8, transition)!;
-      final starPaint = Paint();
-      final random = math.Random(42);
-      for (int i = 0; i < 50; i++) {
-        final sx = random.nextDouble() * size.width;
-        final sy = random.nextDouble() * size.height * 0.7;
-        final sr = random.nextDouble() * 1.5 + 0.5;
-        final twinkle = (math.sin(time * math.pi * 10 + i) + 1) / 2 * 0.5 + 0.5;
-        starPaint.color = Colors.white.withValues(alpha: starAlphaBase * twinkle);
-        canvas.drawCircle(Offset(sx, sy), sr, starPaint);
-      }
-    }
-  }
-
-  void _drawDriftingOrbs(Canvas canvas, Size size, bool isDay) {
-    final floatTime = time * math.pi * 2;
-    
-    final x1 = -60 + math.sin(floatTime) * 40;
-    final y1 = size.height * 0.85 + math.cos(floatTime * 1.2) * 40;
-    final p1 = Paint()
-      ..color = (isDay ? const Color(0xFF60A5FA) : const Color(0xFF818CF8)).withValues(alpha: 0.3)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 40);
-    canvas.drawCircle(Offset(x1, y1), 200, p1);
-
-    final x2 = size.width + 80 + math.cos(floatTime * 0.8) * 60;
-    final y2 = size.height * 0.4 + math.sin(floatTime * 1.5) * 60;
-    final p2 = Paint()
-      ..color = (isDay ? const Color(0xFF818CF8) : const Color(0xFFC084FC)).withValues(alpha: 0.25)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 50);
-    canvas.drawCircle(Offset(x2, y2), 180, p2);
-
-    final x3 = size.width * 0.35 + math.sin(floatTime * 1.3) * 30;
-    final y3 = size.height * 0.6 + math.cos(floatTime * 0.9) * 30;
-    final p3 = Paint()
-      ..color = (isDay ? const Color(0xFF38BDF8) : const Color(0xFF60A5FA)).withValues(alpha: 0.2)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 30);
-    canvas.drawCircle(Offset(x3, y3), 100, p3);
-  }
-
-  void _drawSunTransition(Canvas canvas, Size size, Color c1, Offset aqiTopLeft, double aqiTopLeftRadius) {
-      final sunCenter = Offset.lerp(aqiTopLeft, Offset(size.width - 60, 180), transition)!;
-      final sunRadius = ui.lerpDouble(aqiTopLeftRadius, 140.0, transition)!;
-      
-      final sunGlow = Paint()
-        ..shader = ui.Gradient.radial(sunCenter, sunRadius * 1.8, [
-          Color.lerp(c1.withValues(alpha: 0.3), const Color(0xFFFDE047).withValues(alpha: 0.6), transition)!,
-          Color.lerp(c1.withValues(alpha: 0.0), const Color(0xFFF59E0B).withValues(alpha: 0.0), transition)!,
-        ]);
-      canvas.drawCircle(sunCenter, sunRadius * 1.8, sunGlow);
-      
-      final sunBody = Paint()
-        ..shader = ui.Gradient.radial(sunCenter, sunRadius, [
-            Color.lerp(c1.withValues(alpha: 0.2), const Color(0xFFFEF08A), transition)!,
-            Color.lerp(c1.withValues(alpha: 0.0), const Color(0xFFF59E0B), transition)!,
-          ]
-        );
-      canvas.drawCircle(sunCenter, sunRadius * 0.6, sunBody);
-      
-      final flarePaint = Paint()
-        ..shader = ui.Gradient.radial(sunCenter, sunRadius * 1.2, [
-          Colors.white.withValues(alpha: ui.lerpDouble(0.1, 0.8, transition)!),
-          Colors.white.withValues(alpha: 0.0),
-        ])
-        ..blendMode = BlendMode.overlay;
-      canvas.drawCircle(sunCenter, sunRadius * 1.2, flarePaint);
-      
-      final rayPaint = Paint()
-        ..shader = ui.Gradient.linear(
-          Offset.zero, Offset(0, sunRadius),
-          [
-             Color.lerp(c1.withValues(alpha: 0.1), const Color(0xFFFDE047).withValues(alpha: 0.5), transition)!,
-             Color.lerp(c1.withValues(alpha: 0.0), const Color(0xFFF59E0B).withValues(alpha: 0.0), transition)!,
-          ]
-        )
-        ..strokeWidth = ui.lerpDouble(4.0, 12.0, transition)!
-        ..strokeCap = StrokeCap.round
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 4);
-
-      canvas.save();
-      canvas.translate(sunCenter.dx, sunCenter.dy);
-      canvas.rotate(time * math.pi * 2);
-      for (int i=0; i<8; i++) {
-         canvas.save();
-         canvas.rotate(i * math.pi / 4);
-         canvas.drawLine(Offset(0, sunRadius * 0.5), Offset(0, sunRadius * 0.8 + math.sin(time * math.pi * 10)*15), rayPaint);
-         canvas.restore();
-      }
-      canvas.restore();
-  }
-
-  void _drawMoonTransition(Canvas canvas, Size size, Color c1, Offset aqiTopLeft, double aqiTopLeftRadius) {
-      final moonCenter = Offset.lerp(aqiTopLeft, Offset(size.width - 70, 150), transition)!;
-      final moonRadius = ui.lerpDouble(aqiTopLeftRadius, 80.0, transition)!;
-      
-      final moonGlow = Paint()
-        ..shader = ui.Gradient.radial(moonCenter, moonRadius * 2.5, [
-          Color.lerp(c1.withValues(alpha: 0.3), const Color(0xFFDBEAFE).withValues(alpha: 0.4), transition)!,
-          Color.lerp(c1.withValues(alpha: 0.0), const Color(0xFF1E3A8A).withValues(alpha: 0.0), transition)!,
-        ]);
-      canvas.drawCircle(moonCenter, moonRadius * 2.5, moonGlow);
-      
-      final moonBody = Paint()
-        ..shader = ui.Gradient.radial(
-          Offset(moonCenter.dx - moonRadius * 0.2, moonCenter.dy - moonRadius * 0.2), 
-          moonRadius, 
-          [
-            Color.lerp(c1.withValues(alpha: 0.2), const Color(0xFFF8FAFC), transition)!,
-            Color.lerp(c1.withValues(alpha: 0.0), const Color(0xFF94A3B8), transition)!,
-          ]
-        );
-      canvas.drawCircle(moonCenter, moonRadius, moonBody);
-
-      final craterPaint = Paint()
-        ..color = const Color(0xFF64748B).withValues(alpha: ui.lerpDouble(0.05, 0.25, transition)!)
-        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-      
-      canvas.drawCircle(Offset(moonCenter.dx + moonRadius * 0.2, moonCenter.dy - moonRadius * 0.3), moonRadius * 0.2, craterPaint);
-      canvas.drawCircle(Offset(moonCenter.dx - moonRadius * 0.3, moonCenter.dy + moonRadius * 0.2), moonRadius * 0.3, craterPaint);
-      canvas.drawCircle(Offset(moonCenter.dx + moonRadius * 0.4, moonCenter.dy + moonRadius * 0.4), moonRadius * 0.15, craterPaint);
-  }
-
-  void _drawStylizedCloud(Canvas canvas, Offset center, double width, Color color) {
-     final floatOffset = math.sin(time * math.pi * 10) * 8;
-     final c = Offset(center.dx, center.dy + floatOffset);
-
-    final r1 = width * 0.28;
-    final r2 = width * 0.40;
-    final r3 = width * 0.22;
-
-
-     final d1 = Offset(-width * 0.25, 20);
-     final d2 = Offset.zero;
-     final d3 = Offset(width * 0.30, 30);
-
-     final shadow = Paint()
-       ..color = Colors.black.withValues(alpha: 0.15)
-       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 35);
-     canvas.drawCircle(c + d1 + const Offset(0, 15), r1, shadow);
-     canvas.drawCircle(c + d2 + const Offset(0, 15), r2, shadow);
-     canvas.drawCircle(c + d3 + const Offset(0, 15), r3, shadow);
-
-     final centerColor = Colors.white.withValues(alpha: 0.8);
-     final paint1 = Paint()..shader = ui.Gradient.radial(c + d1, r1, [centerColor, color]);
-     final paint2 = Paint()..shader = ui.Gradient.radial(c + d2, r2, [centerColor, color]);
-     final paint3 = Paint()..shader = ui.Gradient.radial(c + d3, r3, [centerColor, color]);
-     
-     canvas.drawCircle(c + d1, r1, paint1);
-     canvas.drawCircle(c + d2, r2, paint2);
-     canvas.drawCircle(c + d3, r3, paint3);
-
-     final highlight = Paint()
-       ..shader = ui.Gradient.linear(
-         Offset(c.dx, c.dy - width * 0.4),
-         Offset(c.dx, c.dy),
-         [
-           Colors.white.withValues(alpha: 0.8),
-           Colors.white.withValues(alpha: 0.0),
-         ]
-       )
-       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 2);
-     
-     final rimPaint = Paint()
-       ..color = Colors.white.withValues(alpha: 0.5)
-       ..style = PaintingStyle.stroke
-       ..strokeWidth = 2.0;
-
-     canvas.drawCircle(c + d1, r1, highlight);
-     canvas.drawCircle(c + d2, r2, highlight);
-     canvas.drawCircle(c + d3, r3, highlight);
-     
-     canvas.drawCircle(c + d1, r1 - 1, rimPaint);
-     canvas.drawCircle(c + d2, r2 - 1, rimPaint);
-     canvas.drawCircle(c + d3, r3 - 1, rimPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant AtmosphericBackgroundPainter oldDelegate) => true;
+  State<ManageCitiesScreen> createState() => _ManageCitiesScreenState();
 }
 
-class WeatherParticleEmitter extends StatefulWidget {
-  final bool isSnowing;
-  final bool isRaining;
-
-  const WeatherParticleEmitter({super.key, required this.isSnowing, required this.isRaining});
-
-  @override
-  State<WeatherParticleEmitter> createState() => _WeatherParticleEmitterState();
-}
-
-class _WeatherParticleEmitterState extends State<WeatherParticleEmitter> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  final List<Particle> _particles = [];
-  final math.Random _random = math.Random();
+class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
+  final LocationStorageService _locationStorageService = LocationStorageService();
+  final WeatherService _weatherService = WeatherService();
+  late List<LocationModel> _locations;
+  final Map<String, WeatherModel> _weatherCache = {};
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 1))..repeat();
-    _initParticles();
+    _locations = List.from(widget.savedLocations);
+    _loadWeatherData();
   }
-  
-  @override
-  void didUpdateWidget(covariant WeatherParticleEmitter oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.isRaining != widget.isRaining || oldWidget.isSnowing != widget.isSnowing) {
-      _initParticles();
+
+  Future<void> _loadWeatherData() async {
+    for (var loc in _locations) {
+      if (!mounted) return;
+      try {
+        final res = await _weatherService.fetchWeather(loc.latitude, loc.longitude);
+        if (mounted) {
+          setState(() {
+            _weatherCache[loc.name] = res.data;
+          });
+        }
+      } catch (e) {
+        // Handle gracefully
+      }
     }
   }
 
-  void _initParticles() {
-    _particles.clear();
-    int count = widget.isRaining ? 100 : (widget.isSnowing ? 60 : 0);
-    for (int i = 0; i < count; i++) {
-      _particles.add(Particle(
-        x: _random.nextDouble(),
-        y: _random.nextDouble(),
-        speed: (widget.isRaining ? 0.8 : 0.2) + _random.nextDouble() * 0.5,
-        size: widget.isRaining ? (2.0 + _random.nextDouble() * 2) : (3.0 + _random.nextDouble() * 4),
-      ));
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  void _deleteLocation(LocationModel loc) async {
+    await _locationStorageService.removeSavedLocation(loc);
+    setState(() {
+      _locations.removeWhere((l) => l.name == loc.name);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) {
-        return CustomPaint(
-          painter: ParticlePainter(
-            particles: _particles,
-            isRain: widget.isRaining,
-          ),
-        );
-      },
+    return Scaffold(
+      backgroundColor: const Color(0xFF0A0A0A),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  const Spacer(),
+                  const Text(
+                    'Weather',
+                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.more_horiz, color: Colors.white),
+                    onPressed: () {},
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E1E1E),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.search, color: Colors.white.withValues(alpha: 0.5), size: 20),
+                    const SizedBox(width: 12),
+                    Text(
+                      'Search Location',
+                      style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 16),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            if (_locations.isEmpty)
+              const Expanded(
+                child: Center(
+                  child: Text('No cities saved.', style: TextStyle(color: Colors.white)),
+                ),
+              )
+            else
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  itemCount: _locations.length,
+                  itemBuilder: (context, index) {
+                    final loc = _locations[index];
+                    
+                    return Dismissible(
+                      key: Key(loc.name),
+                      direction: DismissDirection.endToStart,
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.only(right: 24.0),
+                        margin: const EdgeInsets.only(bottom: 24.0),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent,
+                          borderRadius: BorderRadius.circular(32),
+                        ),
+                        child: const Icon(Icons.delete, color: Colors.white, size: 32),
+                      ),
+                      onDismissed: (_) => _deleteLocation(loc),
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 24.0),
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(32),
+                          onTap: () {
+                            Navigator.pop(context, loc);
+                          },
+                          child: Container(
+                            height: 140,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF1E1E1E),
+                              borderRadius: BorderRadius.circular(32),
+                              border: widget.currentLocation?.name == loc.name 
+                                ? Border.all(color: Colors.white.withValues(alpha: 0.2)) 
+                                : null,
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  flex: 3,
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          _weatherCache.containsKey(loc.name) ? '${_weatherCache[loc.name]!.temperature.round()}°' : '--°',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 48,
+                                            fontWeight: FontWeight.w300,
+                                            height: 1.0,
+                                            letterSpacing: -1.0,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          _weatherCache.containsKey(loc.name) ? 'H:${_weatherCache[loc.name]!.dailyMaxTemp.round()}° L:${_weatherCache[loc.name]!.dailyMinTemp.round()}°' : 'H:--° L:--°',
+                                          style: TextStyle(
+                                            color: Colors.white.withValues(alpha: 0.5),
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                        const Spacer(),
+                                        Text(
+                                          loc.name,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  flex: 2,
+                                  child: Stack(
+                                    children: [
+                                      Positioned(
+                                        right: -20,
+                                        top: -20,
+                                        child: SizedBox(
+                                          height: 140,
+                                          width: 140,
+                                          child: _weatherCache.containsKey(loc.name)
+                                              ? WeatherIllustration(
+                                                  conditionLabel: _weatherCache[loc.name]!.conditionLabel,
+                                                  isDay: _weatherCache[loc.name]!.isDay,
+                                                )
+                                              : const Center(child: CircularProgressIndicator(color: Colors.white24)),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        bottom: 24,
+                                        right: 24,
+                                        child: Text(
+                                          _weatherCache.containsKey(loc.name) ? _weatherCache[loc.name]!.conditionLabel : '...',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-class Particle {
-  double x;
-  double y;
-  double speed;
-  double size;
-  Particle({required this.x, required this.y, required this.speed, required this.size});
+class _SearchBottomSheet extends StatefulWidget {
+  final GeocodingService geocodingService;
+  final Function(LocationModel) onSelect;
+  
+  const _SearchBottomSheet({required this.geocodingService, required this.onSelect});
+  
+  @override
+  State<_SearchBottomSheet> createState() => _SearchBottomSheetState();
 }
 
-class ParticlePainter extends CustomPainter {
-  final List<Particle> particles;
-  final bool isRain;
+class _SearchBottomSheetState extends State<_SearchBottomSheet> {
+  final TextEditingController _searchController = TextEditingController();
+  List<LocationModel> _searchResults = [];
+  bool _isSearching = false;
 
-  ParticlePainter({required this.particles, required this.isRain});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = isRain ? Colors.white.withValues(alpha: 0.4) : Colors.white.withValues(alpha: 0.8)
-      ..style = isRain ? PaintingStyle.stroke : PaintingStyle.fill
-      ..strokeWidth = isRain ? 1.5 : 0;
-
-    for (var p in particles) {
-      p.y += p.speed * 0.02;
-      if (isRain) {
-        p.x -= 0.005; // Slight wind
-      } else {
-        p.x += math.sin(p.y * 10) * 0.002; // Drifting snow
-      }
-      
-      if (p.y > 1.1) p.y = -0.1;
-      if (p.x < -0.1) p.x = 1.1;
-      if (p.x > 1.1) p.x = -0.1;
-
-      final px = p.x * size.width;
-      final py = p.y * size.height;
-
-      if (isRain) {
-        canvas.drawLine(Offset(px, py), Offset(px - 5, py + 15), paint);
-      } else {
-        canvas.drawCircle(Offset(px, py), p.size, paint);
-      }
+  void _onSearch(String query) async {
+    if (query.isEmpty) {
+      setState(() => _searchResults = []);
+      return;
     }
+    setState(() => _isSearching = true);
+    try {
+      final results = await widget.geocodingService.searchCities(query);
+      setState(() => _searchResults = results);
+    } catch (_) {}
+    setState(() => _isSearching = false);
   }
 
   @override
-  bool shouldRepaint(covariant ParticlePainter oldDelegate) => true;
-}
-
-// ---------------------------------------------------------
-// AQI GAUGE PAINTER
-// ---------------------------------------------------------
-
-class AqiGaugePainter extends CustomPainter {
-  final double value;
-  final Color activeColor;
-
-  final Paint _trackPaint = Paint()
-    ..color = const Color(0xFFE2E8F0).withValues(alpha: 0.5)
-    ..strokeWidth = 12
-    ..style = PaintingStyle.stroke
-    ..strokeCap = StrokeCap.round;
-
-  final Paint _fgPaint = Paint()
-    ..strokeWidth = 12
-    ..style = PaintingStyle.stroke
-    ..strokeCap = StrokeCap.round;
-
-  AqiGaugePainter({required this.value, required this.activeColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = math.min(size.width / 2, size.height / 2) - 8;
-    const startAngle = 135 * (math.pi / 180);
-    const sweepAngle = 270 * (math.pi / 180);
-
-    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), startAngle, sweepAngle, false, _trackPaint);
-
-    final activeSweep = sweepAngle * value;
-    
-    if (value > 0) {
-      _fgPaint.color = activeColor;
-      canvas.drawArc(Rect.fromCircle(center: center, radius: radius), startAngle, activeSweep, false, _fgPaint);
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant AqiGaugePainter oldDelegate) {
-    return oldDelegate.value != value || oldDelegate.activeColor != activeColor;
+  Widget build(BuildContext context) {
+    return GlassContainer(
+      borderRadius: const BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
+      blurSigma: 16.0,
+      overlayColor: Colors.black.withValues(alpha: 0.85),
+      borderColor: Colors.white.withValues(alpha: 0.1),
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            TextField(
+              controller: _searchController,
+              onChanged: _onSearch,
+              style: const TextStyle(
+                color: Colors.black,
+                fontSize: 16,
+                fontWeight: FontWeight.w500,
+              ),
+              decoration: InputDecoration(
+                hintText: 'Search city...',
+                hintStyle: TextStyle(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  fontSize: 16,
+                ),
+                prefixIcon: const Icon(Icons.search, color: Colors.black),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: const EdgeInsets.symmetric(vertical: 18.0),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            if (_isSearching)
+              const CircularProgressIndicator(color: Colors.white)
+            else
+              Expanded(
+                child: ListView.separated(
+                  itemCount: _searchResults.length,
+                  separatorBuilder: (context, index) => Divider(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    height: 1,
+                  ),
+                  itemBuilder: (context, index) {
+                    final loc = _searchResults[index];
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
+                      title: Text(
+                        loc.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      subtitle: Padding(
+                        padding: const EdgeInsets.only(top: 4.0),
+                        child: Text(
+                          loc.country,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                          ),
+                        ),
+                      ),
+                      trailing: const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.white24,
+                        size: 16,
+                      ),
+                      onTap: () {
+                        Navigator.pop(context);
+                        widget.onSelect(loc);
+                      },
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -224,31 +224,6 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
     );
   }
 
-  Widget _buildCompass() {
-    return SizedBox(
-      width: 48,
-      height: 48,
-      child: GlassContainer(
-        borderRadius: BorderRadius.circular(24),
-        blurSigma: 8.0,
-        overlayColor: Colors.black.withValues(alpha: 0.2),
-        borderColor: Colors.white.withValues(alpha: 0.2),
-        child: Center(
-          child: AnimatedRotation(
-            turns: _issHeading / 360.0,
-            duration: const Duration(milliseconds: 1500),
-            curve: Curves.easeOutExpo,
-            child: const Icon(
-              Icons.navigation,
-              color: Color(0xFF06B6D4),
-              size: 22,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildMap() {
     return FlutterMap(
       mapController: _mapController,
@@ -397,52 +372,29 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                               },
                               child: Hero(
                                 tag: 'orbit_map',
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(36),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF06B6D4).withValues(alpha: 0.15),
-                                        blurRadius: 32,
-                                        spreadRadius: -4,
-                                        offset: const Offset(0, 16),
-                                      ),
-                                    ],
-                                  ),
-                                  child: GlassContainer(
-                                    borderRadius: BorderRadius.circular(36),
-                                    blurSigma: 8.0,
-                                    overlayColor: Colors.white.withValues(alpha: 0.05),
-                                    borderColor: (_isReconnecting ? const Color(0xFFF59E0B) : const Color(0xFF06B6D4)).withValues(alpha: 0.3),
-                                    child: _isLoading 
-                                            ? const SkeletonLoader(width: double.infinity, height: double.infinity)
-                                            : _error != null && _issPosition == null
-                                                ? ErrorState(
-                                                    accentColor: const Color(0xFF06B6D4),
-                                                    message: _error!,
-                                                    onRetry: _initFetch,
-                                                  )
-                                                : Stack(
-                                                    children: [
-                                                      ClipRRect(
-                                                        borderRadius: BorderRadius.circular(36),
-                                                        child: _buildMap(),
-                                                      ),
-                                                      if (_issPosition != null)
-                                                        Positioned(
-                                                          top: 16,
-                                                          left: 16,
-                                                          child: _buildCompass(),
-                                                        ),
-                                                    ],
-                                                  ),
+                                child: GlassContainer(
+                                  borderRadius: BorderRadius.circular(36),
+                                  blurSigma: 8.0,
+                                  overlayColor: Colors.white.withValues(alpha: 0.05),
+                                  borderColor: (_isReconnecting ? const Color(0xFFF59E0B) : const Color(0xFF06B6D4)).withValues(alpha: 0.3),
+                                  child: _isLoading 
+                                          ? const SkeletonLoader(width: double.infinity, height: double.infinity)
+                                          : _error != null && _issPosition == null
+                                              ? ErrorState(
+                                                  accentColor: const Color(0xFF06B6D4),
+                                                  message: _error!,
+                                                  onRetry: _initFetch,
+                                                )
+                                              : ClipRRect(
+                                                  borderRadius: BorderRadius.circular(36),
+                                                  child: _buildMap(),
+                                                ),
                                   ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-                      ),
                       const SliverToBoxAdapter(child: SizedBox(height: 24)),
                       
                       // Telemetry Deck

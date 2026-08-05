@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 
 class GlassConfig {
   // MASTER SWITCH: Turn false to instantly disable all blur for performance testing
-  static const bool enableBlur = false; 
+  static const bool enableBlur = true; 
   
   // GLOBAL GLASS TWEAKS
-  static const double blurSigma = 1.0; // Standardized to 8.0 to match existing UI
-  static final Color overlayColor = Colors.white.withValues(alpha: 0.20);
-  static final Color borderColor = Colors.white.withValues(alpha: 0.20);
+  static const double blurSigma = 20.0;
+  static final Color overlayColor = Colors.white.withValues(alpha: 0.10);
+  static final Color borderColor = Colors.white.withValues(alpha: 0.08);
 }
 
 class GlassContainer extends StatelessWidget {
@@ -42,7 +42,7 @@ class GlassContainer extends StatelessWidget {
     final bg = overlayColor ?? GlassConfig.overlayColor;
     final border = borderColor ?? GlassConfig.borderColor;
 
-    Widget container = Container(
+    Widget innerContainer = Container(
       width: width,
       height: height,
       padding: padding,
@@ -54,19 +54,31 @@ class GlassContainer extends StatelessWidget {
       child: child,
     );
 
-    if (!GlassConfig.enableBlur) {
-      return ClipRRect(
-        borderRadius: radius,
-        child: container,
-      );
-    }
+    Widget clippedGlass = GlassConfig.enableBlur
+        ? ClipRRect(
+            borderRadius: radius,
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+              child: innerContainer,
+            ),
+          )
+        : ClipRRect(
+            borderRadius: radius,
+            child: innerContainer,
+          );
 
-    return ClipRRect(
-      borderRadius: radius,
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-        child: container,
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: radius,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 15,
+            spreadRadius: 0,
+          ),
+        ],
       ),
+      child: clippedGlass,
     );
   }
 }

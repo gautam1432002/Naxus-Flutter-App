@@ -6,7 +6,7 @@ class WeatherService {
   final ApiClient _apiClient = ApiClient();
 
   Future<DataResult<WeatherModel>> fetchWeather(double latitude, double longitude) async {
-    final url = 'https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&daily=uv_index_max,sunrise,sunset&timezone=auto';
+    final url = 'https://api.open-meteo.com/v1/forecast?latitude=$latitude&longitude=$longitude&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,is_day&hourly=temperature_2m,weather_code,is_day&daily=uv_index_max,sunrise,sunset,temperature_2m_max,temperature_2m_min&timezone=auto';
 
     final response = await _apiClient.getJson(url, cacheKey: 'weather_${latitude}_$longitude');
     return DataResult(
