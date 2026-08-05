@@ -6,7 +6,7 @@ class GlassConfig {
   static const bool enableBlur = true; 
   
   // GLOBAL GLASS TWEAKS
-  static const double blurSigma = 20.0;
+  static const double blurSigma = 05.0;
   static final Color overlayColor = Colors.white.withValues(alpha: 0.10);
   static final Color borderColor = Colors.white.withValues(alpha: 0.08);
 }

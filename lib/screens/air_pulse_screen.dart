@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:math' as math;
+import 'dart:ui';
 import 'package:flutter/material.dart';
 
 import '../models/air_quality_model.dart';
@@ -14,6 +16,33 @@ import '../services/geocoding_service.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/weather_illustration.dart';
 import '../widgets/static_discover_cloud.dart';
+import '../widgets/nexus_universal_header.dart';
+import '../widgets/tactile_glass_button.dart';
+
+class HeaderGlassButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  const HeaderGlassButton({super.key, required this.icon, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: GlassContainer(
+        borderRadius: BorderRadius.circular(12),
+        blurSigma: 12.0,
+        overlayColor: Colors.white.withValues(alpha: 0.08),
+        borderColor: Colors.white.withValues(alpha: 0.15),
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Icon(icon, color: Colors.white, size: 20),
+        ),
+      ),
+    );
+  }
+}
 
 class AirPulseScreen extends StatefulWidget {
   const AirPulseScreen({super.key});
@@ -26,7 +55,6 @@ class _AirPulseScreenState extends State<AirPulseScreen> with TickerProviderStat
   final WeatherService _weatherService = WeatherService();
   final AirQualityService _airQualityService = AirQualityService();
   final LocationStorageService _locationStorageService = LocationStorageService();
-  final GeocodingService _geocodingService = GeocodingService();
 
   LocationModel? _currentLocation;
   WeatherModel? _weather;
@@ -37,6 +65,13 @@ class _AirPulseScreenState extends State<AirPulseScreen> with TickerProviderStat
 
   late AnimationController _floatController;
   late Animation<Offset> _floatAnimation;
+
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
+  final ScrollController _scrollController = ScrollController();
+  late AnimationController _starController;
+  List<ManageCitiesStarParticle>? _particles;
 
   @override
   void initState() {
@@ -55,12 +90,33 @@ class _AirPulseScreenState extends State<AirPulseScreen> with TickerProviderStat
       curve: Curves.easeInOut,
     ));
 
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _pulseAnimation = TweenSequence([
+      TweenSequenceItem(tween: Tween<double>(begin: 0.0, end: 1.0), weight: 1),
+      TweenSequenceItem(tween: Tween<double>(begin: 1.0, end: 0.0), weight: 1),
+    ]).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
+
+    _starController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 20),
+    )..repeat();
+
+    _scrollController.addListener(() {
+      // Keep alive for AnimatedBuilder
+    });
+
     _initData();
   }
   
   @override
   void dispose() {
     _floatController.dispose();
+    _pulseController.dispose();
+    _starController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -91,15 +147,26 @@ class _AirPulseScreenState extends State<AirPulseScreen> with TickerProviderStat
   Future<void> _fetchData() async {
     if (_currentLocation == null) return;
     
+    final cached = WeatherService.getCachedWeather(_currentLocation!.name);
+    
     if (mounted) {
       setState(() {
-        _isLoading = true;
+        if (cached != null) {
+          _weather = cached;
+          _isLoading = false;
+        } else {
+          _isLoading = true;
+        }
       });
     }
 
     try {
       final results = await Future.wait([
-        _weatherService.fetchWeather(_currentLocation!.latitude, _currentLocation!.longitude),
+        _weatherService.fetchWeather(
+          _currentLocation!.latitude,
+          _currentLocation!.longitude,
+          locationName: _currentLocation!.name,
+        ),
         _airQualityService.fetchAirQuality(_currentLocation!.latitude, _currentLocation!.longitude),
       ]);
 
@@ -121,29 +188,19 @@ class _AirPulseScreenState extends State<AirPulseScreen> with TickerProviderStat
     }
   }
 
-  void _openSearchSheet() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      isScrollControlled: true,
-      builder: (context) => _SearchBottomSheet(
-        geocodingService: _geocodingService,
-        onSelect: (location) async {
-          await _locationStorageService.saveLastLocation(location);
-          await _locationStorageService.addSavedLocation(location);
-          _savedLocations = await _locationStorageService.getSavedLocations();
-          
-          if (mounted) {
-            setState(() {
-              _currentLocation = location;
-              _isLoading = true;
-            });
-            _fetchData();
-          }
-        },
-      ),
-    );
+  void _saveCurrentLocation() async {
+    if (_currentLocation == null) return;
+    
+    bool isSaved = _savedLocations.any((loc) => loc.name == _currentLocation!.name);
+    
+    if (!isSaved) {
+      await _locationStorageService.saveLastLocation(_currentLocation!);
+      await _locationStorageService.addSavedLocation(_currentLocation!);
+      _savedLocations = await _locationStorageService.getSavedLocations();
+      if (mounted) setState(() {});
+    }
+    
+    _pulseController.forward(from: 0.0);
   }
 
   void _openManageCities() async {
@@ -250,7 +307,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> with TickerProviderStat
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 48.0),
               child: GestureDetector(
-                onTap: _openSearchSheet,
+                onTap: _openManageCities,
                 child: Container(
                   width: double.infinity,
                   padding: const EdgeInsets.symmetric(vertical: 20),
@@ -291,120 +348,215 @@ class _AirPulseScreenState extends State<AirPulseScreen> with TickerProviderStat
       );
     }
 
+    if (_particles == null) {
+      final size = MediaQuery.of(context).size;
+      final random = math.Random(42);
+      _particles = List.generate(45, (index) {
+        return ManageCitiesStarParticle(
+          x: random.nextDouble() * size.width,
+          y: random.nextDouble() * size.height,
+          radius: random.nextDouble() * 1.5 + 0.5,
+          opacity: random.nextDouble() * 0.5 + 0.1,
+          speed: random.nextDouble() * 0.5 + 0.1,
+        );
+      });
+    }
+
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Top App Bar Area
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.add, color: Colors.white),
-                    onPressed: _openSearchSheet,
-                  ),
-                  Expanded(
-                    child: Text(
-                      _currentLocation!.name,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w500,
-                        letterSpacing: 0.5,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.menu, color: Colors.white),
-                    onPressed: _openManageCities,
-                  ),
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // Background Gradient (Matches ManageCitiesScreen)
+          Container(
+            decoration: const BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment(-0.5, -0.8),
+                radius: 1.5,
+                colors: [
+                  Color(0xFF1E293B),
+                  Colors.black,
                 ],
               ),
             ),
+          ),
+          
+          // Starfield Animation
+          Positioned.fill(
+            child: AnimatedBuilder(
+              animation: _starController,
+              builder: (context, child) {
+                return CustomPaint(
+                  painter: ManageCitiesStarfieldPainter(_particles!, _starController.value),
+                );
+              },
+            ),
+          ),
 
-            // Main Unified Scrollable Content
-            Expanded(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Column(
-                  children: [
-                    const SizedBox(height: 56),
-                    SlideTransition(
-                      position: _floatAnimation,
-                      child: SizedBox(
-                        height: 220,
-                        width: 220,
-                        child: WeatherIllustration(
-                          conditionLabel: _weather!.conditionLabel,
-                          isDay: _weather!.isDay,
-                          animate: true,
+          // Main Unified Scrollable Content
+          SingleChildScrollView(
+            controller: _scrollController,
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              children: [
+                const SizedBox(height: 140), // Space for Header + Big Title
+                SlideTransition(
+                  position: _floatAnimation,
+                  child: SizedBox(
+                    height: 180,
+                    width: 180,
+                    child: WeatherIllustration(
+                      conditionLabel: _weather!.conditionLabel,
+                      isDay: _weather!.isDay,
+                      animate: true,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '${_weather!.temperature.round()}°',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 100,
+                    fontWeight: FontWeight.w300,
+                    height: 1.0,
+                    letterSpacing: -2.0,
+                  ),
+                ),
+                Text(
+                  _weather!.conditionLabel,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.8),
+                    fontSize: 22,
+                    fontWeight: FontWeight.w400,
+                    letterSpacing: 1.0,
+                  ),
+                ),
+                const SizedBox(height: 24),
+
+                // AQI / Stats Panel
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: GlassContainer(
+                    borderRadius: BorderRadius.circular(24),
+                    blurSigma: 16.0,
+                    overlayColor: Colors.white.withValues(alpha: 0.05),
+                    borderColor: Colors.white.withValues(alpha: 0.1),
+                    child: Padding(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildStatItem('AQI', _airQuality?.europeanAqi.round().toString() ?? '--', _getAqiColor(_airQuality?.europeanAqi ?? 0)),
+                          _buildStatItem('HUMIDITY', '${_weather!.humidity.round()}%', Colors.blueAccent),
+                          _buildStatItem('WIND', '${_weather!.windSpeed.round()} km/h', Colors.grey.shade400),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 40),
+
+                // Hourly Forecast Section
+                _buildHourlyForecastSection(),
+                const SizedBox(height: 40),
+
+                // Weekly Forecast Section
+                _buildWeeklyForecastSection(),
+                const SizedBox(height: 40),
+              ],
+            ),
+          ),
+
+          // Universal Header (matches Echoes screen)
+          NexusUniversalHeader(
+            onBack: () => Navigator.pop(context),
+            actions: [
+              TactileGlassButton(
+                icon: Icons.search,
+                onTap: _openManageCities,
+              ),
+            ],
+          ),
+
+          // Dynamic Title Overlay
+          AnimatedBuilder(
+            animation: Listenable.merge([_scrollController, _pulseController]),
+            builder: (context, child) {
+              double offset = 0;
+              if (_scrollController.hasClients) {
+                offset = _scrollController.offset;
+              }
+              
+              // 0 -> 100 scroll offset controls the transition
+              double progress = (offset / 100).clamp(0.0, 1.0);
+              
+              double topPadding = MediaQuery.of(context).padding.top;
+              
+              // Start position: center of the screen, just above illustration
+              double startTop = topPadding + 64; 
+              // End position: inside the NexusUniversalHeader
+              double endTop = topPadding + 14; 
+              
+              double currentTop = startTop - (startTop - endTop) * progress;
+              
+              // Font size interpolation
+              double currentSize = 40 - (40 - 16) * progress;
+              // Letter spacing interpolation
+              double currentSpacing = 0.5 - (0.5 - 0.0) * progress;
+              
+              // Capsule styling interpolation
+              double capsuleOpacity = progress;
+              double paddingH = 0 + (16 * progress);
+              double paddingV = 0 + (6 * progress);
+
+              return Positioned(
+                top: currentTop,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: GestureDetector(
+                    onTap: _saveCurrentLocation,
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(
+                          sigmaX: 10.0 * capsuleOpacity + 0.001,
+                          sigmaY: 10.0 * capsuleOpacity + 0.001,
                         ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      '${_weather!.temperature.round()}°',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 100,
-                        fontWeight: FontWeight.w300,
-                        height: 1.0,
-                        letterSpacing: -2.0,
-                      ),
-                    ),
-                    Text(
-                      _weather!.conditionLabel,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontSize: 22,
-                        fontWeight: FontWeight.w400,
-                        letterSpacing: 1.0,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-
-                    // AQI / Stats Panel
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                      child: GlassContainer(
-                        borderRadius: BorderRadius.circular(24),
-                        blurSigma: 16.0,
-                        overlayColor: Colors.white.withValues(alpha: 0.05),
-                        borderColor: Colors.white.withValues(alpha: 0.1),
-                        child: Padding(
-                          padding: const EdgeInsets.all(20.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _buildStatItem('AQI', _airQuality?.europeanAqi.round().toString() ?? '--', _getAqiColor(_airQuality?.europeanAqi ?? 0)),
-                              _buildStatItem('HUMIDITY', '${_weather!.humidity.round()}%', Colors.blueAccent),
-                              _buildStatItem('WIND', '${_weather!.windSpeed.round()} km/h', Colors.grey.shade400),
-                            ],
+                        child: Container(
+                          padding: EdgeInsets.symmetric(horizontal: paddingH, vertical: paddingV),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.1 * capsuleOpacity),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.2 * capsuleOpacity),
+                              width: 1.0 * capsuleOpacity,
+                            ),
+                          ),
+                          child: Text(
+                            _currentLocation!.name,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: currentSize,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: currentSpacing,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.greenAccent.withValues(alpha: _pulseAnimation.value),
+                                  blurRadius: 16.0,
+                                )
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 40),
-
-                    // Hourly Forecast Section
-                    _buildHourlyForecastSection(),
-                    const SizedBox(height: 40),
-
-                    // Weekly Forecast Section
-                    _buildWeeklyForecastSection(),
-                    const SizedBox(height: 40),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-          ],
-        ),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -678,7 +830,7 @@ class InteractiveWeatherCard extends StatelessWidget {
     return GlassContainer(
       borderRadius: BorderRadius.circular(24),
       blurSigma: 12.0,
-      overlayColor: const Color(0xFF1E1E1E).withValues(alpha: 0.6),
+      overlayColor: Colors.white.withValues(alpha: 0.05),
       borderColor: Colors.white.withValues(alpha: 0.1),
       child: SizedBox(
         width: width,
@@ -855,17 +1007,149 @@ class ManageCitiesScreen extends StatefulWidget {
   State<ManageCitiesScreen> createState() => _ManageCitiesScreenState();
 }
 
-class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
+class ManageCitiesStarParticle {
+  double x;
+  double y;
+  double radius;
+  double opacity;
+  double speed;
+
+  ManageCitiesStarParticle({
+    required this.x,
+    required this.y,
+    required this.radius,
+    required this.opacity,
+    required this.speed,
+  });
+}
+
+class ManageCitiesStarfieldPainter extends CustomPainter {
+  final List<ManageCitiesStarParticle> particles;
+  final double animationValue;
+  final Paint _paint = Paint();
+
+  ManageCitiesStarfieldPainter(this.particles, this.animationValue);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    for (var particle in particles) {
+      double currentY = (particle.y + (particle.speed * animationValue * size.height)) % size.height;
+      double currentOpacity = particle.opacity * (0.5 + 0.5 * math.sin(animationValue * math.pi * 2 + particle.x));
+      _paint.color = Colors.white.withValues(alpha: currentOpacity);
+      canvas.drawCircle(Offset(particle.x, currentY), particle.radius, _paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+}
+
+class _ManageCitiesScreenState extends State<ManageCitiesScreen> with TickerProviderStateMixin {
   final LocationStorageService _locationStorageService = LocationStorageService();
   final WeatherService _weatherService = WeatherService();
+  final GeocodingService _geocodingService = GeocodingService();
   late List<LocationModel> _locations;
   final Map<String, WeatherModel> _weatherCache = {};
+
+  final TextEditingController _searchController = TextEditingController();
+  List<LocationModel> _searchResults = [];
+  bool _isSearching = false;
+
+  void _onSearch(String query) async {
+    if (query.isEmpty) {
+      if (mounted) {
+        setState(() {
+          _searchResults = [];
+          _isSearching = false;
+        });
+      }
+      return;
+    }
+    
+    if (mounted) setState(() => _isSearching = true);
+    
+    try {
+      final results = await _geocodingService.searchCities(query);
+      if (mounted) {
+        setState(() {
+          _searchResults = results;
+          _isSearching = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isSearching = false);
+    }
+  }
+
+  void _onSelectSearchResult(LocationModel location) async {
+    await _locationStorageService.saveLastLocation(location);
+    await _locationStorageService.addSavedLocation(location);
+    
+    if (mounted) {
+      setState(() {
+        if (!_locations.any((loc) => loc.name == location.name)) {
+          _locations.insert(0, location);
+        }
+        _searchController.clear();
+        _searchResults = [];
+        _isSearching = false;
+      });
+      _loadWeatherDataFor(location);
+    }
+  }
+
+  Future<void> _loadWeatherDataFor(LocationModel location) async {
+    try {
+      final result = await _weatherService.fetchWeather(location.latitude, location.longitude);
+      if (mounted) {
+        setState(() {
+          _weatherCache[location.name] = result.data;
+        });
+      }
+    } catch (_) {}
+  }
+
+  late AnimationController _starController;
+  late AnimationController _shimmerController;
+  List<ManageCitiesStarParticle>? _particles;
 
   @override
   void initState() {
     super.initState();
     _locations = List.from(widget.savedLocations);
     _loadWeatherData();
+
+    _starController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 20),
+    )..repeat();
+
+    _shimmerController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _starController.dispose();
+    _shimmerController.dispose();
+    super.dispose();
+  }
+
+  void _initParticles(Size size) {
+    if (_particles != null) return;
+    final random = math.Random(42);
+    _particles = List.generate(45, (index) {
+      return ManageCitiesStarParticle(
+        x: random.nextDouble() * size.width,
+        y: random.nextDouble() * size.height,
+        radius: random.nextDouble() * 1.5 + 0.5,
+        opacity: random.nextDouble() * 0.5 + 0.2,
+        speed: random.nextDouble() * 0.2 + 0.05,
+      );
+    });
   }
 
   Future<void> _loadWeatherData() async {
@@ -894,60 +1178,133 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white, size: 20),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                  const Spacer(),
-                  const Text(
-                    'Weather',
-                    style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    icon: const Icon(Icons.more_horiz, color: Colors.white),
-                    onPressed: () {},
-                  ),
-                ],
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF020015), Color(0xFF0F172A)],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1E1E1E),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.search, color: Colors.white.withValues(alpha: 0.5), size: 20),
-                    const SizedBox(width: 12),
-                    Text(
-                      'Search Location',
-                      style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 16),
+          ),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              _initParticles(Size(constraints.maxWidth, constraints.maxHeight));
+              return AnimatedBuilder(
+                animation: _starController,
+                builder: (context, child) {
+                  return CustomPaint(
+                    painter: ManageCitiesStarfieldPainter(_particles!, _starController.value),
+                    size: Size(constraints.maxWidth, constraints.maxHeight),
+                  );
+                },
+              );
+            },
+          ),
+          SafeArea(
+            child: Column(
+              children: [
+                const SizedBox(height: 56), // Space for NexusUniversalHeader overlay
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
+                  child: GlassContainer(
+                    borderRadius: BorderRadius.circular(20),
+                    blurSigma: 12.0,
+                    overlayColor: Colors.white.withValues(alpha: 0.05),
+                    borderColor: Colors.white.withValues(alpha: 0.1),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                      child: Row(
+                        children: [
+                          Icon(Icons.search, color: Colors.white.withValues(alpha: 0.5), size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: TextField(
+                              controller: _searchController,
+                              onChanged: _onSearch,
+                              style: const TextStyle(color: Colors.white, fontSize: 16),
+                              decoration: InputDecoration(
+                                hintText: 'Search Location',
+                                hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 16),
+                                border: InputBorder.none,
+                              ),
+                            ),
+                          ),
+                          if (_searchController.text.isNotEmpty)
+                            GestureDetector(
+                              onTap: () {
+                                _searchController.clear();
+                                _onSearch('');
+                              },
+                              child: Icon(Icons.close, color: Colors.white.withValues(alpha: 0.5), size: 20),
+                            ),
+                        ],
+                      ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (_locations.isEmpty)
-              const Expanded(
-                child: Center(
-                  child: Text('No cities saved.', style: TextStyle(color: Colors.white)),
-                ),
-              )
-            else
-              Expanded(
+                const SizedBox(height: 16),
+                if (_isSearching)
+                  const Expanded(
+                    child: Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    ),
+                  )
+                else if (_searchResults.isNotEmpty)
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      itemCount: _searchResults.length,
+                      itemBuilder: (context, index) {
+                        final loc = _searchResults[index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12.0),
+                          child: InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () => _onSelectSearchResult(loc),
+                            child: GlassContainer(
+                              borderRadius: BorderRadius.circular(20),
+                              padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.location_on, color: Colors.white, size: 24),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          loc.name,
+                                          style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                                        ),
+                                        if (loc.country.isNotEmpty)
+                                          Text(
+                                            loc.country,
+                                            style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 14),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(Icons.add_circle_outline, color: Colors.white, size: 24),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  )
+                else if (_locations.isEmpty)
+                  const Expanded(
+                    child: Center(
+                      child: Text('No cities saved.', style: TextStyle(color: Colors.white)),
+                    ),
+                  )
+                else
+                  Expanded(
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 24.0),
                   itemCount: _locations.length,
@@ -962,10 +1319,21 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
                         padding: const EdgeInsets.only(right: 24.0),
                         margin: const EdgeInsets.only(bottom: 24.0),
                         decoration: BoxDecoration(
-                          color: Colors.redAccent,
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF7F1D1D), Color(0xFFDC2626)],
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                          ),
                           borderRadius: BorderRadius.circular(32),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.red.withValues(alpha: 0.3),
+                              blurRadius: 15,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
                         ),
-                        child: const Icon(Icons.delete, color: Colors.white, size: 32),
+                        child: const Icon(Icons.delete_sweep, color: Colors.white, size: 36),
                       ),
                       onDismissed: (_) => _deleteLocation(loc),
                       child: Padding(
@@ -975,91 +1343,118 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
                           onTap: () {
                             Navigator.pop(context, loc);
                           },
-                          child: Container(
+                          child: GlassContainer(
                             height: 140,
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1E1E1E),
+                            borderRadius: BorderRadius.circular(32),
+                            blurSigma: 12.0,
+                            overlayColor: Colors.white.withValues(alpha: 0.05),
+                            borderColor: widget.currentLocation?.name == loc.name 
+                                ? Colors.white.withValues(alpha: 0.2)
+                                : Colors.white.withValues(alpha: 0.1),
+                            child: ClipRRect(
                               borderRadius: BorderRadius.circular(32),
-                              border: widget.currentLocation?.name == loc.name 
-                                ? Border.all(color: Colors.white.withValues(alpha: 0.2)) 
-                                : null,
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  flex: 3,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          _weatherCache.containsKey(loc.name) ? '${_weatherCache[loc.name]!.temperature.round()}°' : '--°',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 48,
-                                            fontWeight: FontWeight.w300,
-                                            height: 1.0,
-                                            letterSpacing: -1.0,
+                              child: Stack(
+                                children: [
+                                  Positioned.fill(
+                                    child: AnimatedBuilder(
+                                      animation: _shimmerController,
+                                      builder: (context, child) {
+                                        return Container(
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                Colors.transparent,
+                                                Colors.white.withValues(alpha: 0.08),
+                                                Colors.transparent,
+                                              ],
+                                              stops: const [0.0, 0.5, 1.0],
+                                              begin: Alignment(-2.0 + (_shimmerController.value * 4.0), -0.5),
+                                              end: Alignment(0.0 + (_shimmerController.value * 4.0), 0.5),
+                                            ),
                                           ),
-                                        ),
-                                        const SizedBox(height: 8),
-                                        Text(
-                                          _weatherCache.containsKey(loc.name) ? 'H:${_weatherCache[loc.name]!.dailyMaxTemp.round()}° L:${_weatherCache[loc.name]!.dailyMinTemp.round()}°' : 'H:--° L:--°',
-                                          style: TextStyle(
-                                            color: Colors.white.withValues(alpha: 0.5),
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                        const Spacer(),
-                                        Text(
-                                          loc.name,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                      ],
+                                        );
+                                      },
                                     ),
                                   ),
-                                ),
-                                Expanded(
-                                  flex: 2,
-                                  child: Stack(
+                                  Row(
                                     children: [
-                                      Positioned(
-                                        right: -20,
-                                        top: -20,
-                                        child: SizedBox(
-                                          height: 140,
-                                          width: 140,
-                                          child: _weatherCache.containsKey(loc.name)
-                                              ? WeatherIllustration(
-                                                  conditionLabel: _weatherCache[loc.name]!.conditionLabel,
-                                                  isDay: _weatherCache[loc.name]!.isDay,
-                                                )
-                                              : const Center(child: CircularProgressIndicator(color: Colors.white24)),
+                                      Expanded(
+                                        flex: 3,
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(16.0),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Text(
+                                                _weatherCache.containsKey(loc.name) ? '${_weatherCache[loc.name]!.temperature.round()}°' : '--°',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 48,
+                                                  fontWeight: FontWeight.w300,
+                                                  height: 1.0,
+                                                  letterSpacing: -1.0,
+                                                ),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                _weatherCache.containsKey(loc.name) ? 'H:${_weatherCache[loc.name]!.dailyMaxTemp.round()}° L:${_weatherCache[loc.name]!.dailyMinTemp.round()}°' : 'H:--° L:--°',
+                                                style: TextStyle(
+                                                  color: Colors.white.withValues(alpha: 0.5),
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                              const Spacer(),
+                                              Text(
+                                                loc.name,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 16,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       ),
-                                      Positioned(
-                                        bottom: 24,
-                                        right: 24,
-                                        child: Text(
-                                          _weatherCache.containsKey(loc.name) ? _weatherCache[loc.name]!.conditionLabel : '...',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 12,
-                                          ),
+                                      Expanded(
+                                        flex: 2,
+                                        child: Stack(
+                                          children: [
+                                            Positioned(
+                                              right: -20,
+                                              top: -20,
+                                              child: SizedBox(
+                                                height: 140,
+                                                width: 140,
+                                                child: _weatherCache.containsKey(loc.name)
+                                                    ? WeatherIllustration(
+                                                        conditionLabel: _weatherCache[loc.name]!.conditionLabel,
+                                                        isDay: _weatherCache[loc.name]!.isDay,
+                                                      )
+                                                    : const Center(child: CircularProgressIndicator(color: Colors.white24)),
+                                              ),
+                                            ),
+                                            Positioned(
+                                              bottom: 24,
+                                              right: 24,
+                                              child: Text(
+                                                _weatherCache.containsKey(loc.name) ? _weatherCache[loc.name]!.conditionLabel : '...',
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 12,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -1071,125 +1466,15 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _SearchBottomSheet extends StatefulWidget {
-  final GeocodingService geocodingService;
-  final Function(LocationModel) onSelect;
-  
-  const _SearchBottomSheet({required this.geocodingService, required this.onSelect});
-  
-  @override
-  State<_SearchBottomSheet> createState() => _SearchBottomSheetState();
-}
-
-class _SearchBottomSheetState extends State<_SearchBottomSheet> {
-  final TextEditingController _searchController = TextEditingController();
-  List<LocationModel> _searchResults = [];
-  bool _isSearching = false;
-
-  void _onSearch(String query) async {
-    if (query.isEmpty) {
-      setState(() => _searchResults = []);
-      return;
-    }
-    setState(() => _isSearching = true);
-    try {
-      final results = await widget.geocodingService.searchCities(query);
-      setState(() => _searchResults = results);
-    } catch (_) {}
-    setState(() => _isSearching = false);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GlassContainer(
-      borderRadius: const BorderRadius.only(topLeft: Radius.circular(32), topRight: Radius.circular(32)),
-      blurSigma: 16.0,
-      overlayColor: Colors.black.withValues(alpha: 0.85),
-      borderColor: Colors.white.withValues(alpha: 0.1),
-      child: Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            TextField(
-              controller: _searchController,
-              onChanged: _onSearch,
-              style: const TextStyle(
-                color: Colors.black,
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-              ),
-              decoration: InputDecoration(
-                hintText: 'Search city...',
-                hintStyle: TextStyle(
-                  color: Colors.black.withValues(alpha: 0.4),
-                  fontSize: 16,
-                ),
-                prefixIcon: const Icon(Icons.search, color: Colors.black),
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding: const EdgeInsets.symmetric(vertical: 18.0),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            if (_isSearching)
-              const CircularProgressIndicator(color: Colors.white)
-            else
-              Expanded(
-                child: ListView.separated(
-                  itemCount: _searchResults.length,
-                  separatorBuilder: (context, index) => Divider(
-                    color: Colors.white.withValues(alpha: 0.05),
-                    height: 1,
-                  ),
-                  itemBuilder: (context, index) {
-                    final loc = _searchResults[index];
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 8.0),
-                      title: Text(
-                        loc.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                      subtitle: Padding(
-                        padding: const EdgeInsets.only(top: 4.0),
-                        child: Text(
-                          loc.country,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.5),
-                            fontSize: 14,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ),
-                      trailing: const Icon(
-                        Icons.arrow_forward_ios,
-                        color: Colors.white24,
-                        size: 16,
-                      ),
-                      onTap: () {
-                        Navigator.pop(context);
-                        widget.onSelect(loc);
-                      },
-                    );
-                  },
-                ),
-              ),
-          ],
+      NexusUniversalHeader(
+        onBack: () => Navigator.pop(context),
+        center: const Text(
+          'Manage Cities',
+          style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
-    );
+    ],
+  ),
+);
   }
 }
