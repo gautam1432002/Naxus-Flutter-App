@@ -14,7 +14,6 @@ import '../widgets/error_state.dart';
 import '../widgets/tactile_glass_button.dart';
 import '../widgets/nexus_universal_header.dart';
 import '../services/app_data_store.dart';
-import 'fullscreen_map_screen.dart';
 import '../widgets/glass_container.dart';
 
 class OrbitWatchScreen extends StatefulWidget {
@@ -354,23 +353,7 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                           height: 400,
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                            child: GestureDetector(
-                              onLongPress: () {
-                                if (_issPosition != null) {
-                                  HapticFeedback.mediumImpact();
-                                  Navigator.push(
-                                    context,
-                                    PageRouteBuilder(
-                                      transitionDuration: const Duration(milliseconds: 600),
-                                      reverseTransitionDuration: const Duration(milliseconds: 600),
-                                      pageBuilder: (context, animation, secondaryAnimation) {
-                                        return FullscreenMapScreen(issPosition: _issPosition!);
-                                      },
-                                    ),
-                                  );
-                                }
-                              },
-                              child: Hero(
+                            child: Hero(
                                 tag: 'orbit_map',
                                 child: GlassContainer(
                                   borderRadius: BorderRadius.circular(36),
@@ -394,7 +377,6 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                               ),
                             ),
                           ),
-                        ),
                       const SliverToBoxAdapter(child: SizedBox(height: 24)),
                       
                       // Telemetry Deck
@@ -460,38 +442,38 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
   }
 }
 
-class SpaceEnvironmentBackground extends StatefulWidget {
+class SpaceEnvironmentBackground extends StatelessWidget {
   const SpaceEnvironmentBackground({super.key});
 
   @override
-  State<SpaceEnvironmentBackground> createState() => _SpaceEnvironmentBackgroundState();
-}
-
-class _SpaceEnvironmentBackgroundState extends State<SpaceEnvironmentBackground> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 40))..repeat();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return CustomPaint(
-          painter: _SpacePainter(time: _controller.value),
-          size: Size.infinite,
-        );
-      }
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        // Base color just in case image is missing
+        Container(color: const Color(0xFF060B19)),
+        
+        // Wallpaper Image
+        Image.asset(
+          'assets/images/orbit_bg.jpg',
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            // Graceful fallback if user hasn't put the image in yet
+            return const Center(
+              child: Text(
+                'Please save image as\nassets/images/orbit_bg.jpg',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white54, fontSize: 12),
+              ),
+            );
+          },
+        ),
+        
+        // Dim Effect Overlay
+        Container(
+          color: Colors.black.withValues(alpha: 0.5), // Adjust this alpha for more/less dimming
+        ),
+      ],
     );
   }
 }
