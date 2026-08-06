@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 
 class GlassConfig {
   // MASTER SWITCH: Turn false to instantly disable all blur for performance testing
-  static const bool enableBlur = true; 
+  static const bool enableBlur = false; 
   
   // GLOBAL GLASS TWEAKS
   static const double blurSigma = 05.0;

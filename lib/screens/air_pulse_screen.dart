@@ -396,41 +396,46 @@ class _AirPulseScreenState extends State<AirPulseScreen> with TickerProviderStat
           SingleChildScrollView(
             controller: _scrollController,
             physics: const BouncingScrollPhysics(),
-            child: Column(
-              children: [
-                const SizedBox(height: 140), // Space for Header + Big Title
-                SlideTransition(
-                  position: _floatAnimation,
-                  child: SizedBox(
-                    height: 180,
-                    width: 180,
-                    child: WeatherIllustration(
-                      conditionLabel: _weather!.conditionLabel,
-                      isDay: _weather!.isDay,
-                      animate: true,
+            child: SizedBox(
+              width: double.infinity,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const SizedBox(height: 140), // Space for Header + Big Title
+                  SlideTransition(
+                    position: _floatAnimation,
+                    child: SizedBox(
+                      height: 180,
+                      width: 180,
+                      child: WeatherIllustration(
+                        conditionLabel: _weather!.conditionLabel,
+                        isDay: _weather!.isDay,
+                        animate: true,
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '${_weather!.temperature.round()}°',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 100,
-                    fontWeight: FontWeight.w300,
-                    height: 1.0,
-                    letterSpacing: -2.0,
+                  const SizedBox(height: 16),
+                  Text(
+                    '${_weather!.temperature.round()}°',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 100,
+                      fontWeight: FontWeight.w300,
+                      height: 1.0,
+                      letterSpacing: -2.0,
+                    ),
                   ),
-                ),
-                Text(
-                  _weather!.conditionLabel,
-                  style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    fontSize: 22,
-                    fontWeight: FontWeight.w400,
-                    letterSpacing: 1.0,
+                  Text(
+                    _weather!.conditionLabel,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 22,
+                      fontWeight: FontWeight.w400,
+                      letterSpacing: 1.0,
+                    ),
                   ),
-                ),
                 const SizedBox(height: 24),
 
                 // AQI / Stats Panel
@@ -464,6 +469,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> with TickerProviderStat
                 _buildWeeklyForecastSection(),
                 const SizedBox(height: 40),
               ],
+            ),
             ),
           ),
 
