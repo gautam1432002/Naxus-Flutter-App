@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'skeleton_loader.dart';
 
 class LoadingState extends StatelessWidget {
   final Color accentColor;
@@ -16,7 +17,7 @@ class LoadingState extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(color: accentColor),
+          const SkeletonLoader(width: 48, height: 48, shape: BoxShape.circle),
           const SizedBox(height: 16),
           Text(
             message,

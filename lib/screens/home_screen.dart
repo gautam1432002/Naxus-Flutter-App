@@ -26,7 +26,24 @@ class _HomeScreenState extends State<HomeScreen> {
     _pageController = PageController(viewportFraction: 0.65);
     
     // Kick off background data prefetching
-    AppDataStore().prefetchAll();
+    AppDataStore().prefetchAll().catchError((e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.wifi_off, color: Colors.white, size: 20),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Offline: ${e.toString().replaceAll('Exception: ', '')}')),
+              ],
+            ),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 4),
+          ),
+        );
+      }
+    });
   }
 
   @override
@@ -205,6 +222,11 @@ class _HomeScreenState extends State<HomeScreen> {
                               int index = render['index'];
                               double diff = render['diff'];
                               
+                              final size = MediaQuery.sizeOf(context);
+                              final cardWidth = (size.width * 0.8).clamp(280.0, 400.0);
+                              final cardHeight = (size.height * 0.65).clamp(400.0, 650.0);
+                              final offsetStep = cardWidth * 0.4;
+                              
                               double rotateY = 0;
                               double scale = 1.0;
                               double opacity = 1.0;
@@ -219,13 +241,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                 scale = 1.0 - (0.15 * diff.abs()); 
                                 opacity = 1.0 - (0.4 * diff.abs()); 
                                 rotateY = -8 * diff * (pi / 180); 
-                                translationX = 130 * diff; 
+                                translationX = offsetStep * diff; 
                               } else if (diff.abs() <= 1.5) {
                                 // Smoothly fade out the back cards to prevent pop-in
                                 scale = 0.85 - (0.15 * (diff.abs() - 1)); 
                                 opacity = 0.6 * (1.0 - ((diff.abs() - 1.0) / 0.5)); // fades from 0.6 to 0.0
                                 rotateY = -12 * diff.sign * (pi / 180);
-                                translationX = (130 + 50 * (diff.abs() - 1)) * diff.sign;
+                                translationX = (offsetStep + (offsetStep * 0.38) * (diff.abs() - 1)) * diff.sign;
                               } else {
                                 scale = 0.5;
                                 opacity = 0.0;
@@ -245,13 +267,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                 child: Opacity(
                                   opacity: opacity.clamp(0.0, 1.0),
                                   child: SizedBox(
-                                    width: 340,
-                                    height: 500,
+                                    width: cardWidth,
+                                    height: cardHeight,
                                     // Ignore pointers on the visual layer so the top PageView catches gestures
                                     child: IgnorePointer(
-                                      child: CarouselCard(
-                                        info: _cards[index],
-                                        diff: diff,
+                                      child: RepaintBoundary(
+                                        child: CarouselCard(
+                                          info: _cards[index],
+                                          diff: diff,
+                                        ),
                                       ),
                                     ),
                                   ),

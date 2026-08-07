@@ -19,13 +19,13 @@ class SkeletonLoader extends StatelessWidget {
   Widget build(BuildContext context) {
     return RepaintBoundary(
       child: Shimmer.fromColors(
-        baseColor: const Color(0xFFE2E8F0),
-        highlightColor: const Color(0xFFFFFFFF),
+        baseColor: const Color(0xFF1E293B),
+        highlightColor: const Color(0xFF334155),
         child: Container(
           width: width,
           height: height,
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: const Color(0xFF1E293B),
             shape: shape,
             borderRadius: shape == BoxShape.circle ? null : BorderRadius.circular(borderRadius),
           ),

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import '../models/apod_model.dart';
 import '../models/iss_model.dart';
 import '../models/air_quality_model.dart';
@@ -14,7 +15,7 @@ import 'weather_service.dart';
 import 'wiki_service.dart';
 import 'location_storage_service.dart';
 
-class AppDataStore {
+class AppDataStore extends ChangeNotifier {
   // Singleton instance
   static final AppDataStore _instance = AppDataStore._internal();
   factory AppDataStore() => _instance;
@@ -33,6 +34,9 @@ class AppDataStore {
   Future<void> prefetchAll() async {
     if (isPrefetching) return;
     isPrefetching = true;
+    notifyListeners();
+
+    List<String> errors = [];
 
     final nasaService = NasaService();
     final issService = IssService();
@@ -50,8 +54,9 @@ class AppDataStore {
         ]);
         todayApod = (results[0] as DataResult<ApodModel>).data;
         previousApods = (results[1] as DataResult<List<ApodModel>>).data;
+        notifyListeners();
       } catch (e) {
-        // Silently ignore prefetch failures
+        errors.add('NASA API: $e');
       }
     }();
 
@@ -59,8 +64,9 @@ class AppDataStore {
       try {
         final res = await issService.fetchIssPosition();
         issPosition = res.data;
+        notifyListeners();
       } catch (e) {
-        // Silently ignore prefetch failures
+        errors.add('ISS API: $e');
       }
     }();
 
@@ -68,8 +74,9 @@ class AppDataStore {
       try {
         final res = await wikiService.fetchOnThisDayEvents();
         historyEvents = res.data;
+        notifyListeners();
       } catch (e) {
-        // Silently ignore prefetch failures
+        errors.add('Wiki API: $e');
       }
     }();
 
@@ -84,9 +91,10 @@ class AppDataStore {
           ]);
           weather = (results[0] as DataResult<WeatherModel>).data;
           airQuality = (results[1] as DataResult<AirQualityModel>).data;
+          notifyListeners();
         }
       } catch (e) {
-        // Silently ignore prefetch failures
+        errors.add('Location Data: $e');
       }
     }();
 
@@ -98,5 +106,10 @@ class AppDataStore {
     ]);
 
     isPrefetching = false;
+    notifyListeners();
+    
+    if (errors.isNotEmpty) {
+      throw Exception('Failed to fetch data: ${errors.join(', ')}');
+    }
   }
 }

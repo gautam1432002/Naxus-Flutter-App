@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
 import 'glass_container.dart';
 
 class FullscreenImageViewer extends StatelessWidget {

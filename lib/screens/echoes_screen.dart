@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../theme/app_theme.dart';
 import '../models/history_event_model.dart';
 import '../services/wiki_service.dart';
 import '../widgets/skeleton_loader.dart';
@@ -26,6 +24,7 @@ class _EchoesScreenState extends State<EchoesScreen> {
   bool _isOffline = false;
   String? _error;
   int? _expandedIndex;
+  final Map<int, GlobalKey> _itemKeys = {};
 
   @override
   void initState() {
@@ -124,7 +123,12 @@ class _EchoesScreenState extends State<EchoesScreen> {
               slivers: [
               SliverToBoxAdapter(
                 child: Padding(
-                  padding: const EdgeInsets.only(left: 24.0, right: 24.0, top: 80.0, bottom: 16.0),
+                  padding: EdgeInsets.only(
+                    left: 24.0, 
+                    right: 24.0, 
+                    top: MediaQuery.paddingOf(context).top + 60.0, 
+                    bottom: 16.0
+                  ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -223,6 +227,7 @@ class _EchoesScreenState extends State<EchoesScreen> {
                         final event = _events![index];
                         final isLast = index == _events!.length - 1;
                         final isExpanded = _expandedIndex == index;
+                        final itemKey = _itemKeys.putIfAbsent(index, () => GlobalKey());
 
                         return AnimationConfiguration.staggeredList(
                           position: index,
@@ -230,6 +235,7 @@ class _EchoesScreenState extends State<EchoesScreen> {
                           child: SlideAnimation(
                             horizontalOffset: 60.0,
                             child: FadeInAnimation(
+                              key: itemKey,
                               child: _ChronoSpineRow(
                                 event: event,
                                 isLast: isLast,
@@ -241,6 +247,16 @@ class _EchoesScreenState extends State<EchoesScreen> {
                                       _expandedIndex = null;
                                     } else {
                                       _expandedIndex = index;
+                                      Future.delayed(const Duration(milliseconds: 150), () {
+                                        if (itemKey.currentContext != null) {
+                                          Scrollable.ensureVisible(
+                                            itemKey.currentContext!,
+                                            alignment: 0.5,
+                                            duration: const Duration(milliseconds: 350),
+                                            curve: Curves.easeInOutCubic,
+                                          );
+                                        }
+                                      });
                                     }
                                   });
                                 },
@@ -400,13 +416,6 @@ class _ChronoSpineRow extends StatelessWidget {
                       color: isExpanded ? const Color(0xFF06B6D4) : Colors.white.withValues(alpha: 0.05),
                       width: isExpanded ? 2.0 : 1.0,
                     ),
-                    boxShadow: isExpanded ? AppTheme.bentoShadow : [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 10,
-                        offset: const Offset(0, 5),
-                      )
-                    ],
                   ),
                   child: GlassContainer(
                     borderRadius: BorderRadius.circular(28),

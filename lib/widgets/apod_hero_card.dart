@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/material.dart';
 import '../models/apod_model.dart';
 import '../theme/app_theme.dart';
 import 'fullscreen_image_viewer.dart';

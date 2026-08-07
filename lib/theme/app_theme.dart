@@ -57,6 +57,11 @@ class AppTheme {
           textStyle: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.bold),
         ),
       ),
+      pageTransitionsTheme: PageTransitionsTheme(
+        builders: <TargetPlatform, PageTransitionsBuilder>{
+          TargetPlatform.android: const ZoomPageTransitionsBuilder(),
+        },
+      ),
     );
   }
 }

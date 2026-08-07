@@ -55,11 +55,13 @@ class GlassContainer extends StatelessWidget {
     );
 
     Widget clippedGlass = GlassConfig.enableBlur
-        ? ClipRRect(
-            borderRadius: radius,
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
-              child: innerContainer,
+        ? RepaintBoundary(
+            child: ClipRRect(
+              borderRadius: radius,
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: sigma, sigmaY: sigma),
+                child: innerContainer,
+              ),
             ),
           )
         : ClipRRect(

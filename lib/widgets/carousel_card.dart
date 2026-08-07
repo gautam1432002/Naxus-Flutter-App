@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'glass_container.dart';
 
 class CardThemeInfo {
@@ -150,7 +149,7 @@ class CarouselCard extends StatelessWidget {
                           ..rotateX(diff * pi / 3) // Rotates vertically based on swipe
                           ..rotateY(-diff * pi / 2.5) // Rotates horizontally
                           ..rotateZ(diff * pi / 4) // Spins as it moves
-                          ..scale(0.5 + 0.5 * activeFocus), // Scales up in the center
+                          ..scaleByDouble(0.5 + 0.5 * activeFocus, 0.5 + 0.5 * activeFocus, 0.5 + 0.5 * activeFocus, 1.0), // Scales up in the center
                         child: Container(
                           width: 180,
                           height: 180,

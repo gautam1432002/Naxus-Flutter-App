@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'package:flutter_map/flutter_map.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/iss_model.dart';
 import '../services/iss_service.dart';
@@ -176,32 +177,34 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
   String _formatLat(double lat) => '${lat.abs().toStringAsFixed(4)}° ${lat >= 0 ? 'N' : 'S'}';
   String _formatLng(double lng) => '${lng.abs().toStringAsFixed(4)}° ${lng >= 0 ? 'E' : 'W'}';
 
-  Widget _buildBentoCellList(String label, IconData icon, double value, String Function(double) formatter) {
+  Widget _buildBentoGridCell(String label, IconData icon, double value, String Function(double) formatter, Color accentColor) {
     return GlassContainer(
-      borderRadius: BorderRadius.circular(16),
-      blurSigma: 8.0,
-      overlayColor: Colors.white.withValues(alpha: 0.05),
-      borderColor: Colors.white.withValues(alpha: 0.2),
+      borderRadius: BorderRadius.circular(24),
+      blurSigma: 16.0,
+      overlayColor: Colors.white.withValues(alpha: 0.03),
+      borderColor: Colors.white.withValues(alpha: 0.08),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 16.0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
           children: [
             Row(
               children: [
-                Icon(icon, size: 18, color: const Color(0xFF06B6D4)),
-                const SizedBox(width: 12),
+                Icon(icon, size: 14, color: accentColor.withValues(alpha: 0.8)),
+                const SizedBox(width: 6),
                 Text(
                   label,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.8),
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
-                    letterSpacing: 1.0,
+                    color: Colors.white.withValues(alpha: 0.6),
+                    fontWeight: FontWeight.w600,
+                    fontSize: 10,
+                    letterSpacing: 1.5,
                   ),
                 ),
               ],
             ),
+            const Spacer(),
+            _buildTelemetryGraphic(label, accentColor),
+            const SizedBox(height: 12),
             TweenAnimationBuilder<double>(
               tween: Tween<double>(begin: value, end: value),
               duration: const Duration(milliseconds: 750),
@@ -211,16 +214,124 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                   formatter(val),
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w300,
+                    letterSpacing: 1.0,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.visible,
                 );
               },
             ),
+            const Spacer(),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildTelemetryGraphic(String label, Color accentColor) {
+    if (label == 'LATITUDE') {
+      return Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: accentColor.withValues(alpha: 0.4), width: 1.5),
+          color: accentColor.withValues(alpha: 0.1),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(width: 44, height: 1.5, color: accentColor.withValues(alpha: 0.5)),
+            Container(
+              width: 36,
+              height: 2.5,
+              decoration: BoxDecoration(
+                color: accentColor,
+                boxShadow: [BoxShadow(color: accentColor, blurRadius: 4)],
+              ),
+            ).animate(onPlay: (c) => c.repeat(reverse: true))
+             .moveY(begin: -15, end: 15, duration: 1.5.seconds, curve: Curves.easeInOut),
+          ],
+        ),
+      );
+    } else if (label == 'LONGITUDE') {
+      return Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          border: Border.all(color: accentColor.withValues(alpha: 0.4), width: 1.5),
+          color: accentColor.withValues(alpha: 0.1),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(width: 1.5, height: 44, color: accentColor.withValues(alpha: 0.5)),
+            Container(
+              width: 2.5,
+              height: 36,
+              decoration: BoxDecoration(
+                color: accentColor,
+                boxShadow: [BoxShadow(color: accentColor, blurRadius: 4)],
+              ),
+            ).animate(onPlay: (c) => c.repeat(reverse: true))
+             .moveX(begin: -15, end: 15, duration: 1.5.seconds, curve: Curves.easeInOut),
+          ],
+        ),
+      );
+    } else if (label == 'ALTITUDE') {
+      return SizedBox(
+        width: 44,
+        height: 44,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Container(
+              width: 4, 
+              height: 44, 
+              decoration: BoxDecoration(
+                color: accentColor.withValues(alpha: 0.25),
+                borderRadius: BorderRadius.circular(2),
+              )
+            ),
+            Icon(Icons.keyboard_arrow_up, color: accentColor, size: 24)
+             .animate(onPlay: (c) => c.repeat())
+             .moveY(begin: 18, end: -18, duration: 2.seconds)
+             .fade(begin: 0.2, end: 1.0, duration: 500.ms)
+             .then(delay: 500.ms)
+             .fade(begin: 1.0, end: 0.0, duration: 500.ms),
+          ],
+        ),
+      );
+    } else { // VELOCITY
+      return SizedBox(
+        width: 44,
+        height: 44,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            for (int i = 0; i < 3; i++)
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 3),
+                height: 2.5,
+                width: 20.0 + (i * 8),
+                decoration: BoxDecoration(
+                  color: accentColor,
+                  boxShadow: [BoxShadow(color: accentColor.withValues(alpha: 0.8), blurRadius: 4)],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ).animate(onPlay: (c) => c.repeat())
+               .moveX(begin: -15, end: 15, duration: (500 + i * 150).ms, curve: Curves.easeInOut)
+               .fade(begin: 0, end: 1, duration: 250.ms)
+               .then(delay: 150.ms)
+               .fade(begin: 1, end: 0, duration: 250.ms),
+          ],
+        ),
+      );
+    }
   }
 
   Widget _buildMap() {
@@ -383,16 +494,17 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
                       if (_issPosition != null)
                         SliverPadding(
                           padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-                          sliver: SliverList(
-                            delegate: SliverChildListDelegate([
-                              _buildBentoCellList('LATITUDE', Icons.explore, _issPosition!.latitude, _formatLat),
-                              const SizedBox(height: 12),
-                              _buildBentoCellList('LONGITUDE', Icons.public, _issPosition!.longitude, _formatLng),
-                              const SizedBox(height: 12),
-                              _buildBentoCellList('ALTITUDE', Icons.height, _issPosition!.altitude, (val) => '${val.toStringAsFixed(1)} km'),
-                              const SizedBox(height: 12),
-                              _buildBentoCellList('VELOCITY', Icons.speed, _issPosition!.velocity, (val) => '${val.toStringAsFixed(0)} km/h'),
-                            ]),
+                          sliver: SliverGrid.count(
+                            crossAxisCount: 2,
+                            mainAxisSpacing: 16,
+                            crossAxisSpacing: 16,
+                            childAspectRatio: 1.1,
+                            children: [
+                              _buildBentoGridCell('LATITUDE', Icons.explore, _issPosition!.latitude, _formatLat, const Color(0xFF3B82F6)),
+                              _buildBentoGridCell('LONGITUDE', Icons.public, _issPosition!.longitude, _formatLng, const Color(0xFF8B5CF6)),
+                              _buildBentoGridCell('ALTITUDE', Icons.height, _issPosition!.altitude, (val) => '${val.toStringAsFixed(1)} km', const Color(0xFFF59E0B)),
+                              _buildBentoGridCell('VELOCITY', Icons.speed, _issPosition!.velocity, (val) => '${val.toStringAsFixed(0)} km/h', const Color(0xFF10B981)),
+                            ],
                           ),
                         ),
                     ],
@@ -478,76 +590,7 @@ class SpaceEnvironmentBackground extends StatelessWidget {
   }
 }
 
-class _SpacePainter extends CustomPainter {
-  final double time;
 
-  _SpacePainter({required this.time});
-
-  void _drawSatellite(Canvas canvas, Offset center, double rotation) {
-    canvas.save();
-    canvas.translate(center.dx, center.dy);
-    canvas.rotate(rotation);
-    canvas.scale(0.35); // Scale down the ISS shape to act as a generic satellite
-    
-    // Draw it with a semi-transparent cyan tint for the hologram/background effect
-    final Paint overridePaint = Paint()..color = const Color(0xFF06B6D4).withValues(alpha: 0.4);
-    _drawISSStationShapes(canvas, overridePaint);
-    
-    canvas.restore();
-  }
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Deep cosmic background
-    final bgPaint = Paint()
-      ..shader = ui.Gradient.linear(
-        Offset.zero,
-        Offset(0, size.height),
-        [
-          const Color(0xFF040B16),
-          const Color(0xFF0B1426),
-          const Color(0xFF150B24),
-        ],
-        [0.0, 0.5, 1.0],
-      );
-    canvas.drawRect(Offset.zero & size, bgPaint);
-
-    // Nebula Accents
-    final nebula1 = Paint()
-      ..color = const Color(0xFF06B6D4).withValues(alpha: 0.15)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 100);
-    canvas.drawCircle(Offset(size.width * 0.2, size.height * 0.2), 200, nebula1);
-
-    final nebula2 = Paint()
-      ..color = const Color(0xFF8B5CF6).withValues(alpha: 0.12)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 120);
-    canvas.drawCircle(Offset(size.width * 0.8, size.height * 0.8), 250, nebula2);
-
-    // Orbital Paths
-    final orbitPaint = Paint()
-      ..color = const Color(0xFF06B6D4).withValues(alpha: 0.15)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.0;
-    
-    final center = Offset(size.width / 2, size.height * 0.4);
-    canvas.drawCircle(center, 160, orbitPaint);
-    canvas.drawCircle(center, 240, orbitPaint);
-
-    // Satellites
-    final angle1 = time * 2 * math.pi;
-    final sat1X = center.dx + 160 * math.cos(angle1);
-    final sat1Y = center.dy + 160 * math.sin(angle1);
-    _drawSatellite(canvas, Offset(sat1X, sat1Y), angle1 + math.pi / 2);
-    
-    final angle2 = -time * 2 * math.pi * 0.6 + math.pi;
-    final sat2X = center.dx + 240 * math.cos(angle2);
-    final sat2Y = center.dy + 240 * math.sin(angle2);
-    _drawSatellite(canvas, Offset(sat2X, sat2Y), angle2 + math.pi / 2);
-  }
-
-  @override
-  bool shouldRepaint(covariant _SpacePainter oldDelegate) => time != oldDelegate.time;
-}
 
 class _MiniatureISSMarker extends StatefulWidget {
   final double heading;

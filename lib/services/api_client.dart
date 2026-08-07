@@ -30,9 +30,41 @@ class ApiClient {
     String? cacheKey,
     Duration timeout = const Duration(seconds: 10),
     Map<String, String>? headers,
+    int staleWhileRevalidateMinutes = 60, // Data younger than this is returned immediately while fetching in background
   }) async {
+    // Stale-While-Revalidate logic
+    if (cacheKey != null) {
+      final cached = await _cacheService.getCachedData(cacheKey);
+      if (cached != null) {
+        final age = cached['ageMinutes'] as int;
+        if (age < staleWhileRevalidateMinutes) {
+          // Kick off background fetch to update cache, but don't await it
+          _performNetworkFetch(url, cacheKey, timeout, headers).catchError((_) => null);
+          return ApiResponse(
+            jsonDecode(cached['data'] as String),
+            isStale: true,
+            staleAgeMinutes: age,
+          );
+        }
+      }
+    }
+
+    // Cache miss or too old, must wait for network
+    return await _performNetworkFetch(url, cacheKey, timeout, headers);
+  }
+
+  Future<ApiResponse> _performNetworkFetch(
+    String url,
+    String? cacheKey,
+    Duration timeout,
+    Map<String, String>? headers,
+  ) async {
     try {
-      final response = await http.get(Uri.parse(url), headers: headers).timeout(timeout);
+      // Phase 3: Global Headers
+      final globalHeaders = {'User-Agent': 'NexusApp/1.0', 'Accept': 'application/json'};
+      if (headers != null) globalHeaders.addAll(headers);
+
+      final response = await http.get(Uri.parse(url), headers: globalHeaders).timeout(timeout);
 
       if (response.statusCode == 200) {
         if (cacheKey != null) {

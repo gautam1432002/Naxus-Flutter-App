@@ -6,6 +6,8 @@ import 'package:flutter/material.dart';
 import '../models/air_quality_model.dart';
 import '../models/weather_model.dart';
 import '../models/location_model.dart';
+import '../widgets/skeleton_loader.dart';
+import '../widgets/loading_state.dart';
 import '../models/data_result.dart';
 
 import '../services/air_quality_service.dart';
@@ -248,7 +250,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> with TickerProviderStat
     if (_isLoading) {
       return const Scaffold(
         backgroundColor: Color(0xFF0A0A0A),
-        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+        body: LoadingState(accentColor: Colors.white, message: 'Atmospheric Link...'),
       );
     }
 
@@ -344,7 +346,7 @@ class _AirPulseScreenState extends State<AirPulseScreen> with TickerProviderStat
     if (_weather == null || _currentLocation == null) {
       return const Scaffold(
         backgroundColor: Color(0xFF0A0A0A),
-        body: Center(child: CircularProgressIndicator(color: Colors.white)),
+        body: LoadingState(accentColor: Colors.white, message: 'Syncing Local Climate...'),
       );
     }
 
@@ -864,7 +866,6 @@ class InteractiveWeatherIllustration extends StatefulWidget {
 }
 
 class _InteractiveWeatherIllustrationState extends State<InteractiveWeatherIllustration> with SingleTickerProviderStateMixin {
-  bool _isHovered = false;
   late AnimationController _pulseController;
 
   @override
@@ -884,7 +885,6 @@ class _InteractiveWeatherIllustrationState extends State<InteractiveWeatherIllus
 
   void _setHovered(bool hovered) {
     setState(() {
-      _isHovered = hovered;
       if (hovered) {
         _pulseController.repeat(reverse: true);
       } else {
@@ -898,32 +898,25 @@ class _InteractiveWeatherIllustrationState extends State<InteractiveWeatherIllus
     final condition = widget.conditionLabel.toLowerCase();
     IconData iconData = Icons.wb_sunny;
     List<Color> gradientColors = [Colors.yellowAccent, Colors.orangeAccent];
-    Color glowColor = Colors.orangeAccent;
 
     if (condition.contains('cloud') || condition.contains('overcast') || condition.contains('fog') || condition.contains('partly')) {
       iconData = Icons.cloud;
       gradientColors = [Colors.white, Colors.lightBlue.shade100];
-      glowColor = Colors.lightBlue.shade200;
     } else if (condition.contains('rain') || condition.contains('drizzle') || condition.contains('shower')) {
       iconData = Icons.water_drop;
       gradientColors = [Colors.lightBlueAccent, Colors.blue];
-      glowColor = Colors.blueAccent;
     } else if (condition.contains('storm') || condition.contains('thunder')) {
       iconData = Icons.flash_on;
       gradientColors = [Colors.yellow, Colors.deepOrange];
-      glowColor = Colors.amber;
     } else if (condition.contains('snow')) {
       iconData = Icons.ac_unit;
       gradientColors = [Colors.white, Colors.cyan.shade100];
-      glowColor = Colors.cyan;
     } else if (!widget.isDay && !condition.contains('sun') && !condition.contains('clear')) {
       iconData = Icons.nightlight_round;
       gradientColors = [Colors.indigo.shade200, Colors.deepPurpleAccent];
-      glowColor = Colors.deepPurple;
     } else if (!widget.isDay) {
       iconData = Icons.nightlight_round;
       gradientColors = [Colors.indigo.shade200, Colors.deepPurpleAccent];
-      glowColor = Colors.deepPurple;
     }
 
     return MouseRegion(
@@ -1254,9 +1247,14 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> with TickerProv
                 ),
                 const SizedBox(height: 16),
                 if (_isSearching)
-                  const Expanded(
-                    child: Center(
-                      child: CircularProgressIndicator(color: Colors.white),
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      itemCount: 4,
+                      itemBuilder: (context, index) => const Padding(
+                        padding: EdgeInsets.only(bottom: 12.0),
+                        child: SkeletonLoader(width: double.infinity, height: 72, borderRadius: 16),
+                      ),
                     ),
                   )
                 else if (_searchResults.isNotEmpty)
@@ -1440,7 +1438,7 @@ class _ManageCitiesScreenState extends State<ManageCitiesScreen> with TickerProv
                                                         conditionLabel: _weatherCache[loc.name]!.conditionLabel,
                                                         isDay: _weatherCache[loc.name]!.isDay,
                                                       )
-                                                    : const Center(child: CircularProgressIndicator(color: Colors.white24)),
+                                                    : const Center(child: SkeletonLoader(width: 80, height: 80, shape: BoxShape.circle)),
                                               ),
                                             ),
                                             Positioned(
