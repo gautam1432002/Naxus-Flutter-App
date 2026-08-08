@@ -290,6 +290,9 @@ class _HomeScreenState extends State<HomeScreen> {
                       Positioned.fill(
                         child: PageView.builder(
                           controller: _pageController,
+                          physics: const BouncingScrollPhysics(
+                            parent: PageScrollPhysics(),
+                          ),
                           itemCount: _cards.length,
                           itemBuilder: (context, index) {
                             return GestureDetector(
@@ -303,8 +306,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                   // If clicked a side card, animate to it
                                   _pageController.animateToPage(
                                     index,
-                                    duration: const Duration(milliseconds: 400),
-                                    curve: Curves.easeOutCubic,
+                                    duration: const Duration(milliseconds: 500),
+                                    curve: Curves.easeOutQuart,
                                   );
                                 }
                               },
