@@ -18,11 +18,15 @@ class WikiService {
     );
     
     final eventsJson = response.data['events'] as List?;
-    if (eventsJson == null) return DataResult([], isOffline: response.isStale);
+    if (eventsJson == null) return DataResult([], isOffline: response.isOffline);
+
+    final List<HistoryEventModel> events = (eventsJson as List)
+        .map((e) => HistoryEventModel.fromJson(e))
+        .toList();
 
     return DataResult(
-      eventsJson.map((e) => HistoryEventModel.fromJson(e)).toList(),
-      isOffline: response.isStale,
+      events,
+      isOffline: response.isOffline,
     );
   }
 }

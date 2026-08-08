@@ -11,7 +11,7 @@ class AirQualityService {
     final response = await _apiClient.getJson(url, cacheKey: 'aqi_${latitude}_$longitude');
     return DataResult(
       AirQualityModel.fromJson(response.data),
-      isOffline: response.isStale,
+      isOffline: response.isOffline,
     );
   }
 }

@@ -21,7 +21,7 @@ class NasaService {
     final response = await _apiClient.getJson(url, cacheKey: date != null ? 'apod_$date' : 'apod_today');
     return DataResult(
       ApodModel.fromJson(response.data),
-      isOffline: response.isStale,
+      isOffline: response.isOffline,
     );
   }
 
@@ -49,7 +49,7 @@ class NasaService {
     final list = data.map((json) => ApodModel.fromJson(json as Map<String, dynamic>)).toList();
     return DataResult(
       list.reversed.toList(),
-      isOffline: response.isStale,
+      isOffline: response.isOffline,
     );
   }
 }

@@ -10,7 +10,7 @@ class IssService {
     final response = await _apiClient.getJson(primaryUrl, timeout: const Duration(seconds: 15), cacheKey: 'iss_current');
     return DataResult(
       IssModel.fromJson(response.data),
-      isOffline: response.isStale,
+      isOffline: response.isOffline,
     );
   }
 
@@ -22,7 +22,7 @@ class IssService {
     final List<dynamic> data = response.data;
     return DataResult(
       data.map((json) => IssModel.fromJson(json)).toList(),
-      isOffline: response.isStale,
+      isOffline: response.isOffline,
     );
   }
 }

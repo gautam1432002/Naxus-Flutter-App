@@ -24,7 +24,7 @@ class WeatherService {
 
     return DataResult(
       weatherModel,
-      isOffline: response.isStale,
+      isOffline: response.isOffline,
     );
   }
 }

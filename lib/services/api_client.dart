@@ -7,9 +7,10 @@ import 'cache_service.dart';
 class ApiResponse {
   final dynamic data;
   final bool isStale;
+  final bool isOffline;
   final int staleAgeMinutes;
 
-  ApiResponse(this.data, {this.isStale = false, this.staleAgeMinutes = 0});
+  ApiResponse(this.data, {this.isStale = false, this.isOffline = false, this.staleAgeMinutes = 0});
 }
 
 class ApiException implements Exception {
@@ -92,6 +93,7 @@ class ApiClient {
         return ApiResponse(
           data,
           isStale: true,
+          isOffline: true,
           staleAgeMinutes: cached['ageMinutes'] as int,
         );
       }
