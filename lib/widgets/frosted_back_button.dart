@@ -55,7 +55,9 @@ class _FrostedBackButtonState extends State<FrostedBackButton> {
             borderRadius: BorderRadius.circular(22),
             overlayColor: Colors.white.withValues(alpha: 0.20),
             borderColor: Colors.transparent,
-            blurSigma: 3.0,
+            // Unified header button blur config
+            blurSigmaX: GlassConfig.headerBlurSigmaX,
+            blurSigmaY: GlassConfig.headerBlurSigmaY,
             child: const Center(
               child: Icon(Icons.arrow_back, color: Colors.white, size: 24),
             ),

@@ -53,7 +53,12 @@ class ApodHeroCard extends StatelessWidget {
           builder: (context, scrollController) {
             return GlassContainer(
               borderRadius: const BorderRadius.vertical(top: Radius.circular(36)),
-              blurSigma: 12.0,
+              // Cosmic Lens "Explore Article" panel blur config
+              blurSigmaX: GlassConfig.articlePanelBlurSigmaX,
+              blurSigmaY: GlassConfig.articlePanelBlurSigmaY,
+              // Always force real blur here (like the city name background in AirPulse)
+              // so the article text is easy to read, even if global glass is disabled.
+              forceRealGlass: true,
               overlayColor: const Color(0xFF0F172A).withValues(alpha: 0.12),
               borderColor: Colors.white.withValues(alpha: 0.15),
               child: ListView(

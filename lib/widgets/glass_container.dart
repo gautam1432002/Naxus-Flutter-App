@@ -5,10 +5,38 @@ class GlassConfig {
   /// Master switch:
   /// true  = real BackdropFilter glass
   /// false = fake/gradient glass (better performance)
-  static const bool enableBlur = false;
+  static const bool enableBlur = false; // Enabled to allow real glass effects
 
-  /// Real blur intensity when enableBlur = true.
-  static const double blurSigma = 5.0;
+  // ==========================================
+  // BLUR CONFIGURATIONS (BackdropFilter values)
+  // ==========================================
+  
+  /// 1. Unified Header Buttons (Back Button, Action Buttons)
+  /// Used in FrostedBackButton and TactileGlassButton.
+  /// Modifying this changes all universal header buttons across the app.
+  /// Lower values are better for performance. Default: 8.0
+  static const double headerBlurSigmaX = 8.0;
+  static const double headerBlurSigmaY = 8.0;
+
+  /// 2. Cosmic Lens "Explore Article" panel
+  /// Used in the DraggableScrollableSheet in ApodHeroCard.
+  /// Since this is a large scrolling panel, keep blur moderate (8.0 - 12.0)
+  /// to avoid dropping frames while scrolling the article text. Default: 12.0
+  static const double articlePanelBlurSigmaX = 12.0;
+  static const double articlePanelBlurSigmaY = 12.0;
+
+  /// 3. Orbit Watch Information Bento Cards (Lat, Lng, Alt, Vel)
+  /// Used in orbit_watch_screen.dart (_buildInfoCard).
+  /// These are static cards, so a slightly higher blur is fine. Default: 16.0
+  static const double orbitWatchCardsBlurSigmaX = 16.0;
+  static const double orbitWatchCardsBlurSigmaY = 16.0;
+
+  // ==========================================
+  // GENERAL GLASS SETTINGS
+  // ==========================================
+  
+  /// Global default blur intensity fallback
+  static const double defaultBlurSigma = 5.0;
 
   /// Transparent white glass tint.
   static const double glassOpacity = 0.10;
@@ -29,10 +57,19 @@ class GlassContainer extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final BorderRadius? borderRadius;
 
-  /// Optional overrides.
+  /// Optional blur overrides.
+  /// If provided, these override the GlassConfig values.
+  final double? blurSigmaX;
+  final double? blurSigmaY;
+  
+  // Deprecated: use blurSigmaX and blurSigmaY
   final double? blurSigma;
+
   final Color? overlayColor;
   final Color? borderColor;
+  
+  /// Force Real Glass Mode regardless of GlassConfig.enableBlur
+  final bool forceRealGlass;
 
   const GlassContainer({
     super.key,
@@ -41,16 +78,20 @@ class GlassContainer extends StatelessWidget {
     this.height,
     this.padding,
     this.borderRadius,
+    this.blurSigmaX,
+    this.blurSigmaY,
     this.blurSigma,
     this.overlayColor,
     this.borderColor,
+    this.forceRealGlass = false,
   });
 
   @override
   Widget build(BuildContext context) {
     final radius = borderRadius ?? BorderRadius.circular(16);
 
-    final sigma = blurSigma ?? GlassConfig.blurSigma;
+    final sigmaX = blurSigmaX ?? blurSigma ?? GlassConfig.defaultBlurSigma;
+    final sigmaY = blurSigmaY ?? blurSigma ?? GlassConfig.defaultBlurSigma;
 
     final glassColor = overlayColor ??
         Colors.white.withValues(
@@ -86,14 +127,14 @@ class GlassContainer extends StatelessWidget {
     // ============================================================
     // REAL GLASS MODE
     // ============================================================
-    if (GlassConfig.enableBlur) {
+    if (GlassConfig.enableBlur || forceRealGlass) {
       glass = RepaintBoundary(
         child: ClipRRect(
           borderRadius: radius,
           child: BackdropFilter(
             filter: ImageFilter.blur(
-              sigmaX: sigma,
-              sigmaY: sigma,
+              sigmaX: sigmaX,
+              sigmaY: sigmaY,
             ),
             child: innerContent,
           ),

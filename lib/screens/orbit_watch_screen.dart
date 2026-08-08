@@ -180,7 +180,9 @@ class _OrbitWatchScreenState extends State<OrbitWatchScreen> with TickerProvider
   Widget _buildBentoGridCell(String label, IconData icon, double value, String Function(double) formatter, Color accentColor) {
     return GlassContainer(
       borderRadius: BorderRadius.circular(24),
-      blurSigma: 16.0,
+      // Orbit Watch Bento Cards blur config
+      blurSigmaX: GlassConfig.orbitWatchCardsBlurSigmaX,
+      blurSigmaY: GlassConfig.orbitWatchCardsBlurSigmaY,
       overlayColor: Colors.white.withValues(alpha: 0.03),
       borderColor: Colors.white.withValues(alpha: 0.08),
       child: Padding(

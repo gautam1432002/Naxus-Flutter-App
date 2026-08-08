@@ -46,6 +46,9 @@ class _TactileGlassButtonState extends State<TactileGlassButton> {
             height: 48,
             child: GlassContainer(
               borderRadius: BorderRadius.circular(24),
+              // Unified header button blur config
+              blurSigmaX: GlassConfig.headerBlurSigmaX,
+              blurSigmaY: GlassConfig.headerBlurSigmaY,
               child: Center(
                 child: Icon(
                       widget.icon,
